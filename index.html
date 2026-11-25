@@ -248,10 +248,10 @@
                 </p>
             </div>
 
-            <!-- 1. AVATAR TİPİ -->
+            <!-- 1. AVATAR TİPİ (2x2 GRID) -->
             <div class="bg-white/90 rounded-2xl p-3 border-2 border-sky-200 mb-3">
                 <h3 class="text-xs font-black text-sky-700 uppercase tracking-wider mb-2">🐾 1. KARAKTERİNİ SEÇ</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div class="grid grid-cols-2 gap-2">
                     <button type="button" data-avatar="polarbear" class="avatar-btn opt-btn active rounded-xl p-2.5 flex items-center justify-center gap-2.5 cursor-pointer">
                         <span class="text-2xl">🐻‍❄️</span>
                         <div class="text-left">
@@ -271,6 +271,13 @@
                         <div class="text-left">
                             <div class="text-xs sm:text-sm font-black">Tilki</div>
                             <div class="text-[11px] font-bold text-slate-500">Turuncu Kış Avcısı</div>
+                        </div>
+                    </button>
+                    <button type="button" data-avatar="arcticrabbit" class="avatar-btn opt-btn rounded-xl p-2.5 flex items-center justify-center gap-2.5 cursor-pointer">
+                        <span class="text-2xl">🐰</span>
+                        <div class="text-left">
+                            <div class="text-xs sm:text-sm font-black">Kutup Tavşanı</div>
+                            <div class="text-[11px] font-bold text-slate-500">Uzun Kulaklı Kışçı</div>
                         </div>
                     </button>
                 </div>
@@ -1175,8 +1182,8 @@
             const isBlue = this.team === 'blue';
             const dir = Math.cos(this.aimAngle) >= 0 ? 1 : -1;
             const isLaughing = this.laughTimer > 0;
-            // Kıs kıs gülme: zıplama veya yana savrulma yerine omuzların ritmik aşağı-yukarı titremesi
-            const giggleOffsetY = isLaughing ? Math.sin(this.gigglePhase) * 3.0 : 0;
+            // Kıs kıs gülme: yana sallanma yerine omuz/gövdenin minik ritimlerle aşağı-yukarı titremesi
+            const giggleOffsetY = isLaughing ? Math.sin(this.gigglePhase) * 2.4 : 0;
             const animT = performance.now() * 0.008 + this.id * 1.3;
 
             ctx.save();
@@ -1217,9 +1224,10 @@
             const scarfColor = isBlue ? '#38bdf8' : '#ef4444';
             const scarfStripe = isBlue ? '#ffffff' : '#fef08a';
             const hatMain = isBlue ? '#2563eb' : '#dc2626';
+            const gloveColor = isBlue ? '#1d4ed8' : '#b91c1c';
 
             if (this.avatarType === 'arcticfox') {
-                const tailWag = Math.sin(animT * 1.3) * 7;
+                const tailWag = Math.sin(animT * 1.3) * 6;
                 ctx.save();
                 ctx.translate(-dir * 25, -24 + giggleOffsetY * 0.5);
                 ctx.rotate(-dir * (0.28 + tailWag * 0.02));
@@ -1236,6 +1244,15 @@
                 ctx.ellipse(-dir * 32, -13, 12, 9, -dir * 0.35, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.restore();
+            } else if (this.avatarType === 'arcticrabbit') {
+                const tailBob = isLaughing ? Math.sin(this.gigglePhase) * 2.0 : Math.sin(animT * 1.3) * 1.5;
+                ctx.fillStyle = this.hurtTimer > 0 ? '#fecaca' : '#ffffff';
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 2.6;
+                ctx.beginPath();
+                ctx.arc(-dir * 33, -24 + giggleOffsetY * 0.5 + tailBob, 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
             }
 
             const stepA = Math.sin(this.walkPhase) * 9;
@@ -1259,7 +1276,7 @@
             } else {
                 const pawFill = this.hurtTimer > 0
                     ? '#fecaca'
-                    : (this.avatarType === 'polarbear' ? '#f1f5f9' : '#7c2d12');
+                    : (this.avatarType === 'polarbear' || this.avatarType === 'arcticrabbit' ? '#f1f5f9' : '#7c2d12');
                 [
                     { ox: -13 + stepB * 0.7, ly: liftB },
                     { ox: 13 + stepA * 0.7, ly: liftA }
@@ -1274,7 +1291,7 @@
                 });
             }
 
-            const bodyY = -34 + giggleOffsetY * 0.6;
+            const bodyY = -34 + giggleOffsetY;
             if (this.avatarType === 'penguin') {
                 ctx.fillStyle = this.hurtTimer > 0 ? '#ef4444' : '#1e293b';
                 ctx.strokeStyle = '#0f172a';
@@ -1288,21 +1305,21 @@
                 ctx.beginPath();
                 ctx.ellipse(dir * 5, bodyY + 2, 22, 22, 0, 0, Math.PI * 2);
                 ctx.fill();
-            } else if (this.avatarType === 'polarbear') {
+            } else if (this.avatarType === 'polarbear' || this.avatarType === 'arcticrabbit') {
                 const bearBodyGrad = ctx.createRadialGradient(-dir * 6, bodyY - 6, 6, 0, bodyY, 36);
                 bearBodyGrad.addColorStop(0, this.hurtTimer > 0 ? '#fecaca' : '#ffffff');
-                bearBodyGrad.addColorStop(1, this.hurtTimer > 0 ? '#fca5a5' : '#dbeafe');
+                bearBodyGrad.addColorStop(1, this.hurtTimer > 0 ? '#fca5a5' : (this.avatarType === 'arcticrabbit' ? '#e0f2fe' : '#dbeafe'));
                 ctx.fillStyle = bearBodyGrad;
                 ctx.strokeStyle = '#0f172a';
                 ctx.lineWidth = 3;
                 ctx.beginPath();
-                ctx.ellipse(0, bodyY, 35, 27, 0, 0, Math.PI * 2);
+                ctx.ellipse(0, bodyY, this.avatarType === 'arcticrabbit' ? 32 : 35, 27, 0, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
 
-                ctx.fillStyle = '#f8fafc';
+                ctx.fillStyle = this.avatarType === 'arcticrabbit' ? '#fff1f2' : '#f8fafc';
                 ctx.beginPath();
-                ctx.ellipse(dir * 6, bodyY + 3, 21, 18, 0, 0, Math.PI * 2);
+                ctx.ellipse(dir * 6, bodyY + 3, 19, 17, 0, 0, Math.PI * 2);
                 ctx.fill();
             } else {
                 const foxBodyGrad = ctx.createRadialGradient(-dir * 5, bodyY - 6, 5, 0, bodyY, 32);
@@ -1322,7 +1339,7 @@
                 ctx.fill();
             }
 
-            const scarfWave = Math.sin(animT * 1.45) * 7 + (this.grounded ? Math.sin(this.walkPhase) * 3.5 : -5);
+            const scarfWave = Math.sin(animT * 1.45) * 6 + (this.grounded ? Math.sin(this.walkPhase) * 3 : -4);
             ctx.fillStyle = scarfColor;
             ctx.strokeStyle = '#0f172a';
             ctx.lineWidth = 2.5;
@@ -1359,7 +1376,7 @@
             ctx.lineTo(8, -45 + giggleOffsetY);
             ctx.stroke();
 
-            const headY = -74 + giggleOffsetY * 0.45;
+            const headY = -74 + giggleOffsetY * 0.55;
             ctx.save();
             ctx.translate(0, headY);
 
@@ -1377,6 +1394,29 @@
                     ctx.beginPath();
                     ctx.arc(ex, -21, 5, 0, Math.PI * 2);
                     ctx.fill();
+                });
+            } else if (this.avatarType === 'arcticrabbit') {
+                const earBob = isLaughing ? Math.sin(this.gigglePhase * 0.85) * 2.2 : Math.sin(animT * 1.1) * 1.6;
+                [
+                    { bx: -13, tilt: -0.22, dy: earBob },
+                    { bx: 13,  tilt: 0.22,  dy: -earBob }
+                ].forEach(ear => {
+                    ctx.save();
+                    ctx.translate(ear.bx, -22 + ear.dy);
+                    ctx.rotate(ear.tilt);
+                    ctx.fillStyle = this.hurtTimer > 0 ? '#fecaca' : '#ffffff';
+                    ctx.strokeStyle = '#0f172a';
+                    ctx.lineWidth = 2.8;
+                    ctx.beginPath();
+                    ctx.ellipse(0, -18, 7.6, 20.5, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#fda4af';
+                    ctx.beginPath();
+                    ctx.ellipse(0, -18, 3.6, 13.5, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
                 });
             } else if (this.avatarType === 'arcticfox') {
                 [
@@ -1419,20 +1459,20 @@
                 ctx.arc(dir * 5 + 9, 1, 14, 0, Math.PI * 2);
                 ctx.ellipse(dir * 6, 8, 20, 15, 0, 0, Math.PI * 2);
                 ctx.fill();
-            } else if (this.avatarType === 'polarbear') {
+            } else if (this.avatarType === 'polarbear' || this.avatarType === 'arcticrabbit') {
                 const bearHeadGrad = ctx.createRadialGradient(-dir * 6, -8, 4, 0, 0, 31);
                 bearHeadGrad.addColorStop(0, this.hurtTimer > 0 ? '#fecaca' : '#ffffff');
-                bearHeadGrad.addColorStop(1, this.hurtTimer > 0 ? '#fca5a5' : '#e2e8f0');
+                bearHeadGrad.addColorStop(1, this.hurtTimer > 0 ? '#fca5a5' : (this.avatarType === 'arcticrabbit' ? '#f1f5f9' : '#e2e8f0'));
                 ctx.fillStyle = bearHeadGrad;
                 ctx.strokeStyle = '#0f172a';
                 ctx.lineWidth = 3;
                 ctx.beginPath();
-                ctx.arc(0, 0, 30, 0, Math.PI * 2);
+                ctx.arc(0, 0, this.avatarType === 'arcticrabbit' ? 29 : 30, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
 
-                ctx.fillStyle = '#ffffff';
-                ctx.strokeStyle = '#cbd5e1';
+                ctx.fillStyle = this.avatarType === 'arcticrabbit' ? '#fff1f2' : '#ffffff';
+                ctx.strokeStyle = this.avatarType === 'arcticrabbit' ? '#fecdd3' : '#cbd5e1';
                 ctx.lineWidth = 1.8;
                 ctx.beginPath();
                 ctx.ellipse(dir * 13, 8, 13.5, 10.5, 0, 0, Math.PI * 2);
@@ -1475,15 +1515,14 @@
             const eyeX = dir * 11;
             const eyeY = -4;
             if (isLaughing) {
-                // Kıs kıs gülen kısık gözler
                 ctx.strokeStyle = '#0f172a';
                 ctx.lineWidth = 3.2;
                 ctx.lineCap = 'round';
                 ctx.beginPath();
-                ctx.arc(eyeX - 6, eyeY + 2, 5.8, Math.PI * 1.15, Math.PI * 1.85);
+                ctx.arc(eyeX - 6, eyeY + 2, 5.6, Math.PI * 1.15, Math.PI * 1.85);
                 ctx.stroke();
                 ctx.beginPath();
-                ctx.arc(eyeX + 7, eyeY + 2, 5.8, Math.PI * 1.15, Math.PI * 1.85);
+                ctx.arc(eyeX + 7, eyeY + 2, 5.6, Math.PI * 1.15, Math.PI * 1.85);
                 ctx.stroke();
             } else if (this.isBlinking) {
                 ctx.strokeStyle = '#0f172a';
@@ -1543,7 +1582,7 @@
                 ctx.stroke();
 
                 if (isLaughing) {
-                    const beakOpen = 1.4 + Math.abs(Math.sin(this.gigglePhase * 0.9)) * 1.8;
+                    const beakOpen = 1.4 + Math.abs(Math.sin(this.gigglePhase * 0.9)) * 1.6;
                     ctx.fillStyle = '#d97706';
                     ctx.beginPath();
                     ctx.moveTo(dir * 8, 9);
@@ -1554,20 +1593,28 @@
                     ctx.stroke();
                 }
             } else {
-                ctx.fillStyle = '#0f172a';
-                ctx.beginPath();
-                if (this.avatarType === 'polarbear') {
-                    ctx.ellipse(dir * 17, 4, 5.4, 3.8, 0, 0, Math.PI * 2);
-                } else {
-                    ctx.ellipse(dir * 21, 5, 4.4, 3.2, 0, 0, Math.PI * 2);
-                }
-                ctx.fill();
-
-                if (isLaughing) {
-                    const mouthPulse = 2.0 + Math.abs(Math.sin(this.gigglePhase * 0.9)) * 1.9;
+                if (this.avatarType === 'arcticrabbit') {
                     ctx.fillStyle = '#fb7185';
                     ctx.beginPath();
-                    ctx.ellipse(dir * 13, 11, 5.8, mouthPulse, 0, 0, Math.PI);
+                    ctx.ellipse(dir * 17, 4, 4.6, 3.5, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                } else {
+                    ctx.fillStyle = '#0f172a';
+                    ctx.beginPath();
+                    if (this.avatarType === 'polarbear') {
+                        ctx.ellipse(dir * 17, 4, 5.4, 3.8, 0, 0, Math.PI * 2);
+                    } else {
+                        ctx.ellipse(dir * 21, 5, 4.4, 3.2, 0, 0, Math.PI * 2);
+                    }
+                    ctx.fill();
+                }
+
+                if (isLaughing) {
+                    const mouthPulse = 1.8 + Math.abs(Math.sin(this.gigglePhase * 0.9)) * 1.6;
+                    ctx.fillStyle = '#fb7185';
+                    ctx.beginPath();
+                    ctx.ellipse(dir * 13, 11, 5.6, mouthPulse, 0, 0, Math.PI);
                     ctx.closePath();
                     ctx.fill();
                     ctx.stroke();
@@ -1606,13 +1653,14 @@
 
             ctx.restore();
 
+            // Eldivenli el (omuz/gövde titremesiyle uyumlu mikro hareket)
             const armBob = isLaughing
-                ? Math.sin(this.gigglePhase) * 2.8
-                : Math.sin(animT * 1.6) * 4;
+                ? Math.sin(this.gigglePhase) * 2.5
+                : Math.sin(animT * 1.6) * 3.5;
             ctx.save();
             if (this.avatarType === 'penguin') {
-                ctx.translate(isLaughing ? dir * 12 : dir * 10, -34 + giggleOffsetY * 0.75 + armBob);
-                ctx.rotate(isLaughing ? -dir * 0.52 : -dir * 0.35);
+                ctx.translate(dir * 10, -34 + giggleOffsetY + armBob);
+                ctx.rotate(-dir * 0.35);
                 ctx.fillStyle = '#0f172a';
                 ctx.strokeStyle = '#0f172a';
                 ctx.lineWidth = 2.4;
@@ -1628,14 +1676,18 @@
                 ctx.strokeStyle = '#0f172a';
                 ctx.lineWidth = 2.5;
                 ctx.beginPath();
-                if (isLaughing) {
-                    ctx.arc(dir * 23, -35 + giggleOffsetY + armBob, 8.8, 0, Math.PI * 2);
-                } else {
-                    ctx.arc(dir * 26, -34 + giggleOffsetY * 0.6 + armBob, 8.8, 0, Math.PI * 2);
-                }
+                ctx.arc(dir * 25, -34 + giggleOffsetY + armBob, 8.8, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
             }
+
+            ctx.fillStyle = gloveColor;
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 2.4;
+            ctx.beginPath();
+            ctx.arc(dir * 27, -34 + giggleOffsetY + armBob, 7.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
             ctx.restore();
 
             if (this.frozenTimer > 0) {
