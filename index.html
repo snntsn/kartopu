@@ -222,7 +222,6 @@
             box-shadow: 0 0 22px rgba(56, 189, 248, 0.85);
         }
 
-        /* Buton Yerini Ayarla Modu */
         body.layout-editing #touch-controls {
             z-index: 45;
             background: rgba(2, 6, 23, 0.48);
@@ -596,7 +595,7 @@
                     const AudioCtx = window.AudioContext || window.webkitAudioContext;
                     if (AudioCtx) this.ctx = new AudioCtx();
                 }
-                if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+                if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
             } catch (_) {}
         }
         toggleMute() { this.muted = !this.muted; return this.muted; }
@@ -604,148 +603,166 @@
             if (this.muted) return;
             this.init();
             if (!this.ctx) return;
-            const now = this.ctx.currentTime;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = 'sine';
-            const base = isDouble ? 360 : 230;
-            osc.frequency.setValueAtTime(base, now);
-            osc.frequency.exponentialRampToValueAtTime(base * 2.15, now + 0.14);
-            gain.gain.setValueAtTime(0.15, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-            osc.connect(gain); gain.connect(this.ctx.destination);
-            osc.start(now); osc.stop(now + 0.16);
+            try {
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                const base = isDouble ? 360 : 230;
+                osc.frequency.setValueAtTime(base, now);
+                osc.frequency.exponentialRampToValueAtTime(base * 2.15, now + 0.14);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(now); osc.stop(now + 0.16);
+            } catch (_) {}
         }
         playDuck() {
             if (this.muted) return;
             this.init();
             if (!this.ctx) return;
-            const now = this.ctx.currentTime;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(240, now);
-            osc.frequency.exponentialRampToValueAtTime(110, now + 0.09);
-            gain.gain.setValueAtTime(0.1, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-            osc.connect(gain); gain.connect(this.ctx.destination);
-            osc.start(now); osc.stop(now + 0.11);
+            try {
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(240, now);
+                osc.frequency.exponentialRampToValueAtTime(110, now + 0.09);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(now); osc.stop(now + 0.11);
+            } catch (_) {}
         }
         playThrow(power = 0.5) {
             if (this.muted) return;
             this.init();
             if (!this.ctx) return;
-            const now = this.ctx.currentTime;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(380 + power * 260, now);
-            osc.frequency.exponentialRampToValueAtTime(110, now + 0.15);
-            gain.gain.setValueAtTime(0.17 + power * 0.1, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
-            osc.connect(gain); gain.connect(this.ctx.destination);
-            osc.start(now); osc.stop(now + 0.17);
+            try {
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(380 + power * 260, now);
+                osc.frequency.exponentialRampToValueAtTime(110, now + 0.15);
+                gain.gain.setValueAtTime(0.17 + power * 0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(now); osc.stop(now + 0.17);
+            } catch (_) {}
         }
         playGiggle() {
             if (this.muted) return;
             this.init();
             if (!this.ctx) return;
-            [660, 880, 740, 990].forEach((f, idx) => {
-                const now = this.ctx.currentTime + idx * 0.055;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(f, now);
-                osc.frequency.exponentialRampToValueAtTime(f * 1.12, now + 0.05);
-                gain.gain.setValueAtTime(0.11, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-                osc.connect(gain); gain.connect(this.ctx.destination);
-                osc.start(now); osc.stop(now + 0.065);
-            });
+            try {
+                [660, 880, 740, 990].forEach((f, idx) => {
+                    const now = this.ctx.currentTime + idx * 0.055;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(f, now);
+                    osc.frequency.exponentialRampToValueAtTime(f * 1.12, now + 0.05);
+                    gain.gain.setValueAtTime(0.11, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(now); osc.stop(now + 0.065);
+                });
+            } catch (_) {}
         }
         playClash() {
             if (this.muted) return;
             this.init();
             if (!this.ctx) return;
-            const now = this.ctx.currentTime;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = 'square';
-            osc.frequency.setValueAtTime(520, now);
-            osc.frequency.exponentialRampToValueAtTime(180, now + 0.09);
-            gain.gain.setValueAtTime(0.11, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-            osc.connect(gain); gain.connect(this.ctx.destination);
-            osc.start(now); osc.stop(now + 0.11);
+            try {
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(520, now);
+                osc.frequency.exponentialRampToValueAtTime(180, now + 0.09);
+                gain.gain.setValueAtTime(0.11, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(now); osc.stop(now + 0.11);
+            } catch (_) {}
         }
         playHit(heavy = false) {
             if (this.muted) return;
             this.init();
             if (!this.ctx) return;
-            const now = this.ctx.currentTime;
-            const dur = heavy ? 0.24 : 0.13;
-            const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * dur, this.ctx.sampleRate);
-            const data = buf.getChannelData(0);
-            for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-            const src = this.ctx.createBufferSource();
-            src.buffer = buf;
-            const filter = this.ctx.createBiquadFilter();
-            filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(heavy ? 640 : 1250, now);
-            filter.frequency.exponentialRampToValueAtTime(135, now + dur);
-            const gain = this.ctx.createGain();
-            gain.gain.setValueAtTime(heavy ? 0.32 : 0.2, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
-            src.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
-            src.start(now);
+            try {
+                const now = this.ctx.currentTime;
+                const dur = heavy ? 0.24 : 0.13;
+                const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * dur, this.ctx.sampleRate);
+                const data = buf.getChannelData(0);
+                for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+                const src = this.ctx.createBufferSource();
+                src.buffer = buf;
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(heavy ? 640 : 1250, now);
+                filter.frequency.exponentialRampToValueAtTime(135, now + dur);
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(heavy ? 0.32 : 0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+                src.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
+                src.start(now);
+            } catch (_) {}
         }
         playFreeze() {
             if (this.muted) return;
             this.init();
             if (!this.ctx) return;
-            [987.77, 1318.51, 1567.98].forEach((f, i) => {
-                const now = this.ctx.currentTime + i * 0.04;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(f, now);
-                gain.gain.setValueAtTime(0.14, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-                osc.connect(gain); gain.connect(this.ctx.destination);
-                osc.start(now); osc.stop(now + 0.19);
-            });
+            try {
+                [987.77, 1318.51, 1567.98].forEach((f, i) => {
+                    const now = this.ctx.currentTime + i * 0.04;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(f, now);
+                    gain.gain.setValueAtTime(0.14, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(now); osc.stop(now + 0.19);
+                });
+            } catch (_) {}
         }
         playPowerup() {
             if (this.muted) return;
             this.init();
             if (!this.ctx) return;
-            [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
-                const now = this.ctx.currentTime + i * 0.05;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(f, now);
-                gain.gain.setValueAtTime(0.15, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
-                osc.connect(gain); gain.connect(this.ctx.destination);
-                osc.start(now); osc.stop(now + 0.15);
-            });
+            try {
+                [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+                    const now = this.ctx.currentTime + i * 0.05;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(f, now);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(now); osc.stop(now + 0.15);
+                });
+            } catch (_) {}
         }
         playCheer() {
             if (this.muted) return;
             this.init();
             if (!this.ctx) return;
-            [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
-                const now = this.ctx.currentTime + i * 0.12;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(f, now);
-                gain.gain.setValueAtTime(0.2, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
-                osc.connect(gain); gain.connect(this.ctx.destination);
-                osc.start(now); osc.stop(now + 0.34);
-            });
+            try {
+                [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+                    const now = this.ctx.currentTime + i * 0.12;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(f, now);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(now); osc.stop(now + 0.34);
+                });
+            } catch (_) {}
         }
     }
     const sfx = new SoundEffects();
@@ -766,53 +783,6 @@
 
     let scaleX = 1;
     let scaleY = 1;
-
-    function syncOrientationState() {
-        const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
-        const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-        const isPortrait = vh > vw;
-        document.body.classList.toggle('is-portrait', isPortrait);
-        const inMatch = ['playing', 'roundIntro', 'roundEnd', 'netclient'].includes(state.screen);
-        document.body.classList.toggle('in-match', inMatch);
-    }
-
-    function resizeCanvas() {
-        const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-        const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
-        canvas.width = vw || window.innerWidth || 1280;
-        canvas.height = vh || window.innerHeight || 720;
-        scaleX = canvas.width / WORLD_W;
-        scaleY = canvas.height / WORLD_H;
-        syncOrientationState();
-        applySavedPadPositions();
-    }
-    function nudgeAddressBar() {
-        resizeCanvas();
-        if (window.matchMedia('(orientation: landscape)').matches) {
-            setTimeout(() => {
-                window.scrollTo(0, 1);
-                resizeCanvas();
-            }, 220);
-        }
-    }
-    window.addEventListener('resize', resizeCanvas);
-    window.addEventListener('orientationchange', nudgeAddressBar);
-    if (window.visualViewport) window.visualViewport.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-
-    function enterLandscapeMatch() {
-        syncOrientationState();
-        try {
-            if (screen.orientation && screen.orientation.lock) {
-                screen.orientation.lock('landscape').catch(() => {});
-            }
-        } catch (_) {}
-        const el = document.documentElement;
-        if (!document.fullscreenElement && el.requestFullscreen) {
-            el.requestFullscreen().catch(() => {});
-        }
-        nudgeAddressBar();
-    }
 
     const rand = (min, max) => Math.random() * (max - min) + min;
     const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
@@ -848,6 +818,48 @@
         floatingTexts: [],
         snowflakes: []
     };
+
+    function syncOrientationState() {
+        const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+        const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        const isPortrait = vh > vw;
+        document.body.classList.toggle('is-portrait', isPortrait);
+        const inMatch = ['playing', 'roundIntro', 'roundEnd', 'netclient'].includes(state.screen);
+        document.body.classList.toggle('in-match', inMatch);
+    }
+
+    function resizeCanvas() {
+        const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+        canvas.width = vw || window.innerWidth || 1280;
+        canvas.height = vh || window.innerHeight || 720;
+        scaleX = canvas.width / WORLD_W;
+        scaleY = canvas.height / WORLD_H;
+        syncOrientationState();
+        if (typeof applySavedPadPositions === 'function') applySavedPadPositions();
+    }
+    function nudgeAddressBar() {
+        resizeCanvas();
+        if (window.matchMedia && window.matchMedia('(orientation: landscape)').matches) {
+            setTimeout(() => {
+                try { window.scrollTo(0, 1); } catch (_) {}
+                resizeCanvas();
+            }, 220);
+        }
+    }
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('orientationchange', nudgeAddressBar);
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', resizeCanvas);
+
+    function enterLandscapeMatch() {
+        syncOrientationState();
+        try {
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(() => {});
+            }
+        } catch (_) {}
+        nudgeAddressBar();
+    }
 
     for (let i = 0; i < 120; i++) {
         state.snowflakes.push({
@@ -1140,7 +1152,7 @@
                 easy:   { react: 0.55, dodgeDist: 175, accuracy: 0.22 },
                 medium: { react: 0.30, dodgeDist: 250, accuracy: 0.10 },
                 hard:   { react: 0.14, dodgeDist: 330, accuracy: 0.03 }
-            }[config.difficulty];
+            }[config.difficulty] || { react: 0.30, dodgeDist: 250, accuracy: 0.10 };
 
             let wantJump = false;
             let wantDuck = false;
@@ -1715,7 +1727,8 @@
 
     function buildLobbySlots(customCode = null) {
         if (customCode) lobbyState.roomCode = customCode;
-        const nick = (document.getElementById('player-nick').value || 'KışOyuncusu').trim() || 'KışOyuncusu';
+        const nickEl = document.getElementById('player-nick');
+        const nick = ((nickEl && nickEl.value) || 'KışOyuncusu').trim() || 'KışOyuncusu';
         if (config.format === '1v1') {
             lobbyState.slots = [
                 { team: 'blue', name: nick, isHuman: true, controlScheme: 'p1', ready: true, avatarType: config.avatarType },
@@ -1733,8 +1746,10 @@
     }
 
     function renderLobby() {
-        document.getElementById('lobby-room-code').textContent = lobbyState.roomCode;
+        const codeEl = document.getElementById('lobby-room-code');
         const container = document.getElementById('lobby-roster');
+        if (!codeEl || !container) return;
+        codeEl.textContent = lobbyState.roomCode;
         container.innerHTML = lobbyState.slots.map((s, idx) => {
             const bg = s.team === 'blue' ? '#eff6ff' : '#fef2f2';
             const border = s.team === 'blue' ? '#93c5fd' : '#fca5a5';
@@ -2347,8 +2362,10 @@
     function gameLoop(now) {
         const dt = Math.min(0.05, (now - lastTime) / 1000);
         lastTime = now;
-        update(dt);
-        render();
+        try {
+            update(dt);
+            render();
+        } catch (_) {}
         requestAnimationFrame(gameLoop);
     }
 
@@ -2372,7 +2389,7 @@
 
     function loadSavedPadPositions() {
         try {
-            const raw = localStorage.getItem(PAD_STORAGE_KEY);
+            const raw = window.localStorage ? localStorage.getItem(PAD_STORAGE_KEY) : null;
             return raw ? JSON.parse(raw) : {};
         } catch (_) {
             return {};
@@ -2381,7 +2398,7 @@
 
     function savePadPositions(map) {
         try {
-            localStorage.setItem(PAD_STORAGE_KEY, JSON.stringify(map));
+            if (window.localStorage) localStorage.setItem(PAD_STORAGE_KEY, JSON.stringify(map));
         } catch (_) {}
     }
 
@@ -2436,10 +2453,11 @@
         isEditingPad = !!enable;
         clearTouchStates();
         document.body.classList.toggle('layout-editing', isEditingPad);
-        document.getElementById('layout-editor-bar').classList.toggle('hidden', !isEditingPad);
+        const bar = document.getElementById('layout-editor-bar');
+        if (bar) bar.classList.toggle('hidden', !isEditingPad);
         if (isEditingPad) {
             const touchControls = document.getElementById('touch-controls');
-            touchControls.classList.remove('hidden');
+            if (touchControls) touchControls.classList.remove('hidden');
             PAD_META.forEach(item => {
                 const el = document.getElementById(item.id);
                 if (!el) return;
@@ -2457,12 +2475,13 @@
 
     function bindDraggableTouchButton(meta) {
         const el = document.getElementById(meta.id);
+        if (!el) return;
         let dragState = null;
 
         const onDown = (e) => {
-            e.preventDefault();
+            if (e.cancelable) e.preventDefault();
             if (isEditingPad) {
-                const pt = e.touches ? e.touches[0] : e;
+                const pt = e.touches && e.touches[0] ? e.touches[0] : e;
                 const rect = el.getBoundingClientRect();
                 dragState = {
                     offsetX: pt.clientX - rect.left,
@@ -2477,8 +2496,8 @@
 
         const onMove = (e) => {
             if (!isEditingPad || !dragState) return;
-            e.preventDefault();
-            const pt = e.touches ? e.touches[0] : e;
+            if (e.cancelable) e.preventDefault();
+            const pt = e.touches && e.touches[0] ? e.touches[0] : e;
             const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
             const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
             const rect = el.getBoundingClientRect();
@@ -2492,7 +2511,7 @@
 
         const onUp = (e) => {
             if (isEditingPad && dragState) {
-                e.preventDefault();
+                if (e && e.cancelable) e.preventDefault();
                 dragState = null;
                 el.classList.remove('dragging-btn');
                 const saved = loadSavedPadPositions();
@@ -2522,7 +2541,7 @@
     }
 
     PAD_META.forEach(bindDraggableTouchButton);
-    applySavedPadPositions();
+    resizeCanvas();
 
     window.addEventListener('blur', clearTouchStates);
     document.addEventListener('visibilitychange', () => {
@@ -2531,25 +2550,26 @@
 
     const touchToggle = document.getElementById('toggle-touch-ui');
     const touchControlsEl = document.getElementById('touch-controls');
-    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) touchToggle.checked = true;
+    if (touchToggle && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) touchToggle.checked = true;
 
     function syncTouchVisibility() {
+        if (!touchControlsEl) return;
         if (isEditingPad) {
             touchControlsEl.classList.remove('hidden');
             return;
         }
         const activeScreen = ['playing', 'roundIntro', 'netclient'].includes(state.screen);
-        const visible = touchToggle.checked && activeScreen;
+        const visible = !!(touchToggle && touchToggle.checked && activeScreen);
         touchControlsEl.classList.toggle('hidden', !visible);
         if (visible) applySavedPadPositions();
     }
-    touchToggle.addEventListener('change', syncTouchVisibility);
+    if (touchToggle) touchToggle.addEventListener('change', syncTouchVisibility);
 
     document.getElementById('btn-edit-pad').addEventListener('click', () => {
         setPadEditMode(!isEditingPad);
     });
     document.getElementById('btn-menu-edit-pad').addEventListener('click', () => {
-        touchToggle.checked = true;
+        if (touchToggle) touchToggle.checked = true;
         document.getElementById('main-menu').classList.add('hidden');
         setPadEditMode(true);
     });
@@ -2563,7 +2583,8 @@
 
     function syncLobbyVisibility() {
         const show = config.playersMode === 'online';
-        document.getElementById('online-lobby-box').classList.toggle('hidden', !show);
+        const box = document.getElementById('online-lobby-box');
+        if (box) box.classList.toggle('hidden', !show);
         if (show && !lobbyState.slots.length) buildLobbySlots();
     }
 
@@ -2604,24 +2625,29 @@
 
     document.getElementById('btn-create-room').addEventListener('click', () => {
         buildLobbySlots(generateRoomCode());
-        document.getElementById('lobby-status-msg').textContent = `Yeni oda oluşturuldu: ${lobbyState.roomCode}`;
+        const m = document.getElementById('lobby-status-msg');
+        if (m) m.textContent = `Yeni oda oluşturuldu: ${lobbyState.roomCode}`;
     });
     document.getElementById('btn-join-room').addEventListener('click', () => {
-        const code = document.getElementById('join-room-input').value.trim().toUpperCase();
+        const inp = document.getElementById('join-room-input');
+        const m = document.getElementById('lobby-status-msg');
+        const code = ((inp && inp.value) || '').trim().toUpperCase();
         if (code.length < 3) {
-            document.getElementById('lobby-status-msg').textContent = 'En az 3 karakterlik oda kodu girin.';
+            if (m) m.textContent = 'En az 3 karakterlik oda kodu girin.';
             return;
         }
         buildLobbySlots(code);
-        document.getElementById('lobby-status-msg').textContent = `${code} odasına bağlanıldı!`;
+        if (m) m.textContent = `${code} odasına bağlanıldı!`;
     });
     document.getElementById('btn-quick-match').addEventListener('click', () => {
         buildLobbySlots(generateRoomCode());
-        document.getElementById('lobby-status-msg').textContent = `Eşleşme bulundu! Oda: ${lobbyState.roomCode}`;
+        const m = document.getElementById('lobby-status-msg');
+        if (m) m.textContent = `Eşleşme bulundu! Oda: ${lobbyState.roomCode}`;
     });
     document.getElementById('btn-fill-bots').addEventListener('click', () => {
         buildLobbySlots();
-        document.getElementById('lobby-status-msg').textContent = 'Boş yerler botlarla dolduruldu!';
+        const m = document.getElementById('lobby-status-msg');
+        if (m) m.textContent = 'Boş yerler botlarla dolduruldu!';
     });
     document.getElementById('player-nick').addEventListener('input', () => {
         if (config.playersMode === 'online') buildLobbySlots();
@@ -2661,8 +2687,6 @@
 
     <!-- FIREBASE ÇEVRİMİÇİ KATMAN -->
     <script>
-    /* Kartopu Savaşı - Firebase çevrimiçi katman (host-otoriter model)
-       Host oyunu simüle eder, diğer oyuncular tuş girdisi gönderir, host durumu ~20 Hz yayınlar. */
     (() => {
     'use strict';
     const DB_URL = 'https://kartopu-ddfbf-default-rtdb.firebaseio.com';
@@ -2683,7 +2707,7 @@
     const capOf = f => (f === '1v1' ? 1 : 2);
     const msg = t => { const el = $('lobby-status-msg'); if (el) el.textContent = t; };
     const fail = e => msg(/permission/i.test(e && e.message) ? 'Firebase kuralları yazmaya izin vermiyor (Realtime Database > Rules).' : 'Bağlantı hatası: ' + (e && e.message));
-    const getNick = () => cleanName($('player-nick').value) || 'Oyuncu';
+    const getNick = () => cleanName($('player-nick') && $('player-nick').value) || 'Oyuncu';
     const ST = () => firebase.database.ServerValue.TIMESTAMP;
 
     function loadSdk() {
@@ -2706,6 +2730,7 @@
 
     function buildLobbyUI() {
       const box = $('online-lobby-box');
+      if (!box) return;
       box.innerHTML = `
         <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
           <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;">
@@ -3146,7 +3171,7 @@
     const invite = new URLSearchParams(location.search).get('oda');
     if (invite) {
       const ob = document.querySelector('[data-players="online"]'); if (ob) ob.click();
-      $('join-room-input').value = invite.toUpperCase();
+      if ($('join-room-input')) $('join-room-input').value = invite.toUpperCase();
       joinRoom(invite);
     }
     })();
