@@ -83,18 +83,32 @@
             box-shadow: 0 4px 12px rgba(2, 132, 199, 0.22);
         }
         .touch-pad-btn {
-            background: rgba(15, 23, 42, 0.52);
-            border: 2.5px solid rgba(255, 255, 255, 0.78);
-            backdrop-filter: blur(4px);
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+            background: rgba(15, 23, 42, 0.16);
+            border: 1.5px solid rgba(255, 255, 255, 0.34);
+            backdrop-filter: none;
+            box-shadow: none;
+            opacity: 0.56;
             touch-action: none;
+            transition: opacity 0.12s ease, background 0.12s ease, transform 0.1s ease;
         }
         .touch-pad-btn:active, .touch-pad-btn.pressed {
-            background: rgba(56, 189, 248, 0.88);
-            border-color: #ffffff;
-            transform: scale(0.93);
+            background: rgba(56, 189, 248, 0.42);
+            border-color: rgba(255, 255, 255, 0.68);
+            opacity: 0.78;
+            transform: scale(0.94);
+        }
+        #t-aim-pad.touch-pad-btn {
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.24) 0%, rgba(2, 132, 199, 0.18) 100%);
+            border: 2px solid rgba(255, 255, 255, 0.42);
+            opacity: 0.58;
+        }
+        #t-aim-pad.touch-pad-btn:active, #t-aim-pad.touch-pad-btn.pressed {
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.45) 0%, rgba(2, 132, 199, 0.32) 100%);
+            border-color: rgba(255, 255, 255, 0.75);
+            opacity: 0.8;
         }
         .touch-pad-btn.edit-mode-active {
+            opacity: 0.92;
             outline: 3px dashed #fbbf24;
             outline-offset: 2px;
             cursor: grab;
@@ -212,9 +226,9 @@
         </div>
 
         <div id="touch-aim-cluster" class="pointer-events-auto fixed bottom-3 sm:bottom-5 right-3 sm:right-6 flex items-end gap-2">
-            <button id="t-aim-pad" type="button" class="touch-pad-btn relative w-20 h-20 sm:w-28 sm:h-28 rounded-full bg-gradient-to-b from-sky-500/80 to-blue-700/85 border-3 sm:border-4 border-white/90 shadow-[0_0_20px_rgba(56,189,248,0.65)] flex flex-col items-center justify-center text-white cursor-pointer">
-                <span class="text-xl sm:text-2xl leading-none pointer-events-none">❄️</span>
-                <span class="text-[11px] sm:text-xs font-black tracking-wide mt-1 pointer-events-none">AT</span>
+            <button id="t-aim-pad" type="button" class="touch-pad-btn relative w-16 h-16 sm:w-22 sm:h-22 rounded-full flex flex-col items-center justify-center text-white cursor-pointer">
+                <span class="text-base sm:text-xl leading-none pointer-events-none">❄️</span>
+                <span class="text-[10px] sm:text-[11px] font-black tracking-wide mt-0.5 pointer-events-none">AT</span>
             </button>
         </div>
     </div>
@@ -236,27 +250,27 @@
 
             <!-- 1. AVATAR TİPİ -->
             <div class="bg-white/90 rounded-2xl p-3 border-2 border-sky-200 mb-3">
-                <h3 class="text-xs font-black text-sky-700 uppercase tracking-wider mb-2">🎭 1. AVATAR TİPİNİ SEÇ</h3>
+                <h3 class="text-xs font-black text-sky-700 uppercase tracking-wider mb-2">🐾 1. KARAKTERİNİ SEÇ</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                    <button type="button" data-avatar="beanie" class="avatar-btn opt-btn active rounded-xl p-2.5 flex items-center justify-center gap-2.5 cursor-pointer">
-                        <span class="text-2xl">🧢</span>
+                    <button type="button" data-avatar="polarbear" class="avatar-btn opt-btn active rounded-xl p-2.5 flex items-center justify-center gap-2.5 cursor-pointer">
+                        <span class="text-2xl">🐻‍❄️</span>
                         <div class="text-left">
-                            <div class="text-xs sm:text-sm font-black">Bere &amp; Atkı</div>
-                            <div class="text-[11px] font-bold text-slate-500">Klasik Kışçı</div>
+                            <div class="text-xs sm:text-sm font-black">Kutup Ayısı</div>
+                            <div class="text-[11px] font-bold text-slate-500">Atkılı Buz Devi</div>
                         </div>
                     </button>
-                    <button type="button" data-avatar="goggles" class="avatar-btn opt-btn rounded-xl p-2.5 flex items-center justify-center gap-2.5 cursor-pointer">
-                        <span class="text-2xl">🥽</span>
+                    <button type="button" data-avatar="penguin" class="avatar-btn opt-btn rounded-xl p-2.5 flex items-center justify-center gap-2.5 cursor-pointer">
+                        <span class="text-2xl">🐧</span>
                         <div class="text-left">
-                            <div class="text-xs sm:text-sm font-black">Kar Gözlüklü</div>
-                            <div class="text-[11px] font-bold text-slate-500">Kuzey Avcısı</div>
+                            <div class="text-xs sm:text-sm font-black">Penguen</div>
+                            <div class="text-[11px] font-bold text-slate-500">Çevik Buz Savaşçısı</div>
                         </div>
                     </button>
-                    <button type="button" data-avatar="icecrown" class="avatar-btn opt-btn rounded-xl p-2.5 flex items-center justify-center gap-2.5 cursor-pointer">
-                        <span class="text-2xl">🧊</span>
+                    <button type="button" data-avatar="arcticfox" class="avatar-btn opt-btn rounded-xl p-2.5 flex items-center justify-center gap-2.5 cursor-pointer">
+                        <span class="text-2xl">🦊</span>
                         <div class="text-left">
-                            <div class="text-xs sm:text-sm font-black">Buz Başlıklı</div>
-                            <div class="text-[11px] font-bold text-slate-500">Donmuş Ruh</div>
+                            <div class="text-xs sm:text-sm font-black">Tilki</div>
+                            <div class="text-[11px] font-bold text-slate-500">Turuncu Kış Avcısı</div>
                         </div>
                     </button>
                 </div>
@@ -635,7 +649,7 @@
         playersMode: null,
         difficulty: 'medium',
         roundsToWin: 3,
-        avatarType: 'beanie',
+        avatarType: 'polarbear',
         touchLayoutEditing: false,
         bots: { blue: 0, red: 1 },
         botDifficulties: ['medium']
@@ -692,14 +706,13 @@
     const keys = {};
 
     function computeSweptAngle(team, sweepProgress) {
-        // sweepProgress 0 -> yatay (x) eksenine yakın, 1 -> yukarı/dikey (y) eksenine doğru eğik
         const clampedP = clamp(sweepProgress, 0, 1);
-        const elevation = 0.14 + clampedP * 0.92; // ~8 derece ile ~61 derece arası
+        const elevation = 0.14 + clampedP * 0.92;
         return team === 'blue' ? -elevation : -(Math.PI - elevation);
     }
 
     class SnowFighterCharacter {
-        constructor({ id, name, team, isHuman, controlScheme, x, avatarType = 'beanie', aiDifficulty = 'medium' }) {
+        constructor({ id, name, team, isHuman, controlScheme, x, avatarType = 'polarbear', aiDifficulty = 'medium' }) {
             this.id = id;
             this.name = name;
             this.team = team;
@@ -713,8 +726,8 @@
             this.vx = 0;
             this.vy = 0;
 
-            this.headRadius = 35;
-            this.footHeight = 16;
+            this.headRadius = 38;
+            this.footHeight = 18;
             this.grounded = true;
             this.jumpsLeft = 2;
             this.jumpPressedLast = false;
@@ -746,6 +759,8 @@
             this.blinkTimer = rand(1.5, 4);
             this.isBlinking = false;
             this.hurtTimer = 0;
+            this.laughTimer = 0;
+            this.gigglePhase = rand(0, Math.PI * 2);
             this.walkPhase = 0;
 
             this.stats = { throws: 0, hits: 0, damage: 0 };
@@ -785,6 +800,8 @@
             this.campTimer = 0;
             this.icicleSpawnCooldown = 0;
             this.hurtTimer = 0;
+            this.laughTimer = 0;
+            this.gigglePhase = rand(0, Math.PI * 2);
             this.ai.decisionTimer = rand(0.65, 1.15);
             this.ai.shootTimer = rand(1.2, 2.1);
         }
@@ -793,7 +810,7 @@
 
         getHitbox() {
             if (this.isDucking) {
-                return { x: this.x, y: this.y - 23, r: this.headRadius * 0.86 };
+                return { x: this.x, y: this.y - 25, r: this.headRadius * 0.88 };
             }
             return { x: this.x, y: this.y - (this.footHeight + this.headRadius), r: this.headRadius };
         }
@@ -817,7 +834,7 @@
                 if (this.campTimer >= CAMP_TRIGGER_SECONDS && this.icicleSpawnCooldown <= 0) {
                     this.icicleSpawnCooldown = 1.35;
                     spawnIcicleAbovePlayer(this);
-                    spawnFloatingText(this.x, this.y - 115, '🧊 SARKIT DÜŞÜYOR!', '#7dd3fc');
+                    spawnFloatingText(this.x, this.y - 122, '🧊 SARKIT DÜŞÜYOR!', '#7dd3fc');
                 }
             } else {
                 this.campTimer = Math.max(0, this.campTimer - dt * 2.5);
@@ -837,12 +854,16 @@
             }
 
             if (this.hurtTimer > 0) this.hurtTimer -= dt;
+            if (this.laughTimer > 0) {
+                this.laughTimer = Math.max(0, this.laughTimer - dt);
+                this.gigglePhase += dt * 46;
+            }
             if (this.cooldown > 0) this.cooldown -= dt;
             if (this.rapidTimer > 0) this.rapidTimer -= dt;
             if (this.superJumpTimer > 0) this.superJumpTimer -= dt;
 
-            const targetSX = this.isDucking ? 1.26 : 1.0;
-            const targetSY = this.isDucking ? 0.68 : 1.0;
+            const targetSX = this.isDucking ? 1.24 : 1.0;
+            const targetSY = this.isDucking ? 0.70 : 1.0;
             this.scaleX += (targetSX - this.scaleX) * Math.min(1, dt * 18);
             this.scaleY += (targetSY - this.scaleY) * Math.min(1, dt * 18);
 
@@ -887,7 +908,6 @@
                         this.sweepDir = 1;
                     }
                     this.charging = true;
-                    // Yatay (x) ekseninden yukarı/dikey (y) eksene doğru kesik çizgi eksenini ilerlet
                     this.sweepProgress += this.sweepDir * dt * 1.15;
                     if (this.sweepProgress >= 1) {
                         this.sweepProgress = 1;
@@ -957,8 +977,8 @@
                 this.grounded = false;
                 this.isDucking = false;
                 this.jumpsLeft--;
-                this.scaleX = 0.78;
-                this.scaleY = 1.28;
+                this.scaleX = 0.80;
+                this.scaleY = 1.24;
                 sfx.playJump(isDouble);
                 spawnSnowPuff(this.x, this.y, 7);
             }
@@ -968,8 +988,8 @@
 
             if (this.y >= GROUND_Y) {
                 if (!this.grounded && this.vy > 220) {
-                    this.scaleX = 1.28;
-                    this.scaleY = 0.74;
+                    this.scaleX = 1.24;
+                    this.scaleY = 0.78;
                     spawnSnowPuff(this.x, GROUND_Y, 6);
                 }
                 this.y = GROUND_Y;
@@ -1098,8 +1118,8 @@
             this.cooldown = this.isHuman
                 ? (this.rapidTimer > 0 ? 0.18 : 0.28)
                 : (this.rapidTimer > 0 ? 0.42 : 0.95);
-            this.scaleX = 1.2;
-            this.scaleY = 0.85;
+            this.scaleX = 1.18;
+            this.scaleY = 0.86;
             sfx.playThrow(isMega ? 1 : this.charge);
         }
 
@@ -1119,7 +1139,7 @@
             if (sb.isFreeze) {
                 this.frozenTimer = 2.0;
                 sfx.playFreeze();
-                spawnFloatingText(this.x, this.y - 95, '🥶 BUZ TUTTU!', '#7dd3fc');
+                spawnFloatingText(this.x, this.y - 102, '🥶 BUZ TUTTU!', '#7dd3fc');
             }
 
             let dmg = sb.damage;
@@ -1127,7 +1147,7 @@
                 const absorbed = Math.min(this.shield, dmg);
                 this.shield -= absorbed;
                 dmg -= absorbed;
-                spawnFloatingText(this.x, this.y - 85, `🛡️ -${absorbed}`, '#38bdf8');
+                spawnFloatingText(this.x, this.y - 92, `🛡️ -${absorbed}`, '#38bdf8');
             }
 
             if (dmg > 0) {
@@ -1135,16 +1155,17 @@
                 if (sb.owner && sb.owner.stats) {
                     sb.owner.stats.hits++;
                     sb.owner.stats.damage += dmg;
+                    sb.owner.laughTimer = 1.15;
                 }
-                spawnFloatingText(this.x, this.y - 78, `-${dmg}`, '#f87171');
+                spawnFloatingText(this.x, this.y - 84, `-${dmg}`, '#f87171');
             }
 
-            this.scaleX = 0.72;
-            this.scaleY = 1.32;
+            this.scaleX = 0.76;
+            this.scaleY = 1.28;
 
             if (this.hp <= 0) {
-                spawnSnowPuff(this.x, this.y - 40, 35, this.team === 'blue' ? '#60a5fa' : '#f87171');
-                spawnFloatingText(this.x, this.y - 95, 'NAKAVT!', '#fbbf24');
+                spawnSnowPuff(this.x, this.y - 42, 35, this.team === 'blue' ? '#60a5fa' : '#f87171');
+                spawnFloatingText(this.x, this.y - 102, 'NAKAVT!', '#fbbf24');
                 triggerShake(0.28, 10);
                 checkRoundEnd();
             }
@@ -1153,20 +1174,24 @@
         draw(ctx) {
             const isBlue = this.team === 'blue';
             const dir = Math.cos(this.aimAngle) >= 0 ? 1 : -1;
+            const isLaughing = this.laughTimer > 0;
+            // Kıs kıs gülme: zıplama veya yana savrulma yerine omuzların ritmik aşağı-yukarı titremesi
+            const giggleOffsetY = isLaughing ? Math.sin(this.gigglePhase) * 3.0 : 0;
+            const animT = performance.now() * 0.008 + this.id * 1.3;
 
             ctx.save();
             ctx.translate(this.x, this.y);
 
             const heightFactor = clamp(1 - (GROUND_Y - this.y) / 350, 0.35, 1);
-            ctx.fillStyle = `rgba(15, 23, 42, ${0.3 * heightFactor})`;
+            ctx.fillStyle = `rgba(15, 23, 42, ${0.32 * heightFactor})`;
             ctx.beginPath();
-            ctx.ellipse(0, GROUND_Y - this.y + 3, 35 * heightFactor, 9 * heightFactor, 0, 0, Math.PI * 2);
+            ctx.ellipse(0, GROUND_Y - this.y + 3, 40 * heightFactor, 10 * heightFactor, 0, 0, Math.PI * 2);
             ctx.fill();
 
             if (!this.isAlive) {
                 ctx.fillStyle = '#f8fafc';
                 ctx.beginPath();
-                ctx.ellipse(0, -8, 36, 16, 0, Math.PI, 0);
+                ctx.ellipse(0, -8, 38, 16, 0, Math.PI, 0);
                 ctx.fill();
                 ctx.fillStyle = isBlue ? '#2563eb' : '#dc2626';
                 ctx.beginPath();
@@ -1181,96 +1206,286 @@
                 ctx.fillStyle = 'rgba(56, 189, 248, 0.16)';
                 ctx.lineWidth = 3.5;
                 ctx.beginPath();
-                ctx.arc(0, -46, 54, 0, Math.PI * 2);
+                ctx.arc(0, -52, 60, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
             }
 
-            const footSwing = Math.sin(this.walkPhase) * 11;
-            const footLift = Math.abs(Math.cos(this.walkPhase)) * 5;
-            ctx.save();
-            ctx.translate(footSwing * dir, -8 - footLift);
-            ctx.fillStyle = isBlue ? '#1d4ed8' : '#b91c1c';
-            ctx.strokeStyle = '#0f172a';
-            ctx.lineWidth = 2.5;
-            ctx.beginPath();
-            ctx.roundRect(-16, -8, 35, 16, [8, 14, 6, 6]);
-            ctx.fill();
-            ctx.stroke();
-            ctx.restore();
-
             ctx.save();
             ctx.scale(this.scaleX, this.scaleY);
-            const headCenterY = -(this.footHeight + this.headRadius);
-            ctx.translate(0, headCenterY);
 
-            const animT = performance.now() * 0.008 + this.id * 1.3;
-            const scarfWave = Math.sin(animT * 1.4) * 8 + (this.grounded ? Math.sin(this.walkPhase) * 4 : -5);
-            const scarfColor = isBlue ? '#38bdf8' : '#fbbf24';
-            const scarfTrim = isBlue ? '#1d4ed8' : '#ea580c';
+            const scarfColor = isBlue ? '#38bdf8' : '#ef4444';
+            const scarfStripe = isBlue ? '#ffffff' : '#fef08a';
+            const hatMain = isBlue ? '#2563eb' : '#dc2626';
 
+            if (this.avatarType === 'arcticfox') {
+                const tailWag = Math.sin(animT * 1.3) * 7;
+                ctx.save();
+                ctx.translate(-dir * 25, -24 + giggleOffsetY * 0.5);
+                ctx.rotate(-dir * (0.28 + tailWag * 0.02));
+                ctx.fillStyle = this.hurtTimer > 0 ? '#fecaca' : '#f97316';
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 2.8;
+                ctx.beginPath();
+                ctx.ellipse(-dir * 16, -8, 26, 15, -dir * 0.35, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#fff7ed';
+                ctx.beginPath();
+                ctx.ellipse(-dir * 32, -13, 12, 9, -dir * 0.35, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            const stepA = Math.sin(this.walkPhase) * 9;
+            const stepB = -Math.sin(this.walkPhase) * 9;
+            const liftA = Math.max(0, Math.cos(this.walkPhase)) * 5;
+            const liftB = Math.max(0, -Math.cos(this.walkPhase)) * 5;
+
+            if (this.avatarType === 'penguin') {
+                [
+                    { ox: -12 + stepB * 0.6, ly: liftB },
+                    { ox: 12 + stepA * 0.6, ly: liftA }
+                ].forEach(f => {
+                    ctx.fillStyle = '#f59e0b';
+                    ctx.strokeStyle = '#0f172a';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.ellipse(f.ox + dir * 3, -6 - f.ly, 13, 6.5, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                });
+            } else {
+                const pawFill = this.hurtTimer > 0
+                    ? '#fecaca'
+                    : (this.avatarType === 'polarbear' ? '#f1f5f9' : '#7c2d12');
+                [
+                    { ox: -13 + stepB * 0.7, ly: liftB },
+                    { ox: 13 + stepA * 0.7, ly: liftA }
+                ].forEach(f => {
+                    ctx.fillStyle = pawFill;
+                    ctx.strokeStyle = '#0f172a';
+                    ctx.lineWidth = 2.6;
+                    ctx.beginPath();
+                    ctx.roundRect(f.ox - 12, -14 - f.ly, 24, 14, [8, 8, 5, 5]);
+                    ctx.fill();
+                    ctx.stroke();
+                });
+            }
+
+            const bodyY = -34 + giggleOffsetY * 0.6;
+            if (this.avatarType === 'penguin') {
+                ctx.fillStyle = this.hurtTimer > 0 ? '#ef4444' : '#1e293b';
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.ellipse(0, bodyY, 32, 28, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.ellipse(dir * 5, bodyY + 2, 22, 22, 0, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (this.avatarType === 'polarbear') {
+                const bearBodyGrad = ctx.createRadialGradient(-dir * 6, bodyY - 6, 6, 0, bodyY, 36);
+                bearBodyGrad.addColorStop(0, this.hurtTimer > 0 ? '#fecaca' : '#ffffff');
+                bearBodyGrad.addColorStop(1, this.hurtTimer > 0 ? '#fca5a5' : '#dbeafe');
+                ctx.fillStyle = bearBodyGrad;
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.ellipse(0, bodyY, 35, 27, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#f8fafc';
+                ctx.beginPath();
+                ctx.ellipse(dir * 6, bodyY + 3, 21, 18, 0, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                const foxBodyGrad = ctx.createRadialGradient(-dir * 5, bodyY - 6, 5, 0, bodyY, 32);
+                foxBodyGrad.addColorStop(0, this.hurtTimer > 0 ? '#fecaca' : '#fb923c');
+                foxBodyGrad.addColorStop(1, this.hurtTimer > 0 ? '#fca5a5' : '#ea580c');
+                ctx.fillStyle = foxBodyGrad;
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.ellipse(0, bodyY, 30, 26, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#fff7ed';
+                ctx.beginPath();
+                ctx.ellipse(dir * 6, bodyY + 2, 18, 19, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            const scarfWave = Math.sin(animT * 1.45) * 7 + (this.grounded ? Math.sin(this.walkPhase) * 3.5 : -5);
             ctx.fillStyle = scarfColor;
             ctx.strokeStyle = '#0f172a';
             ctx.lineWidth = 2.5;
             ctx.beginPath();
-            ctx.moveTo(-dir * 20, 22);
-            ctx.quadraticCurveTo(-dir * 38, 16 + scarfWave * 0.6, -dir * 56, 20 + scarfWave);
-            ctx.lineTo(-dir * 52, 34 + scarfWave);
-            ctx.quadraticCurveTo(-dir * 35, 30 + scarfWave * 0.5, -dir * 18, 31);
+            ctx.moveTo(-dir * 20, -52 + giggleOffsetY);
+            ctx.quadraticCurveTo(-dir * 42, -56 + scarfWave * 0.6 + giggleOffsetY, -dir * 58, -48 + scarfWave + giggleOffsetY);
+            ctx.lineTo(-dir * 54, -35 + scarfWave + giggleOffsetY);
+            ctx.quadraticCurveTo(-dir * 38, -42 + scarfWave * 0.5 + giggleOffsetY, -dir * 18, -42 + giggleOffsetY);
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
 
-            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = scarfStripe;
+            ctx.lineWidth = 2.5;
             ctx.beginPath();
-            ctx.arc(-dir * 57, 27 + scarfWave, 4.5, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.moveTo(-dir * 48, -49 + scarfWave * 0.85 + giggleOffsetY);
+            ctx.lineTo(-dir * 45, -38 + scarfWave * 0.85 + giggleOffsetY);
             ctx.stroke();
-
-            const headGrad = ctx.createRadialGradient(-dir * 8, -10, 6, 0, 0, this.headRadius);
-            headGrad.addColorStop(0, this.hurtTimer > 0 ? '#fecaca' : '#fef08a');
-            headGrad.addColorStop(1, this.hurtTimer > 0 ? '#fca5a5' : '#fcd34d');
-            ctx.fillStyle = headGrad;
-            ctx.strokeStyle = '#0f172a';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.arc(0, 0, this.headRadius, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-
-            ctx.fillStyle = this.hurtTimer > 0 ? 'rgba(239, 68, 68, 0.45)' : 'rgba(251, 113, 133, 0.46)';
-            ctx.beginPath();
-            ctx.ellipse(dir * 15, 7, 7.5, 4.8, 0, 0, Math.PI * 2);
-            ctx.ellipse(-dir * 6, 8, 5.5, 3.6, 0, 0, Math.PI * 2);
-            ctx.fill();
 
             ctx.fillStyle = scarfColor;
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 2.5;
             ctx.beginPath();
-            ctx.roundRect(-28, 21, 56, 12, 6);
+            ctx.roundRect(-27, -56 + giggleOffsetY, 54, 12, 6);
             ctx.fill();
             ctx.stroke();
 
-            ctx.strokeStyle = scarfTrim;
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(-dir * 12, 22);
-            ctx.lineTo(-dir * 12, 32);
-            ctx.moveTo(dir * 6, 22);
-            ctx.lineTo(dir * 6, 32);
-            ctx.stroke();
-
-            const armBob = Math.sin(animT * 1.6) * 4;
-            ctx.fillStyle = isBlue ? '#2563eb' : '#dc2626';
-            ctx.strokeStyle = '#0f172a';
+            ctx.strokeStyle = scarfStripe;
             ctx.lineWidth = 2.4;
             ctx.beginPath();
-            ctx.arc(dir * 29, 13 + armBob, 8.2, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.moveTo(-10, -55 + giggleOffsetY);
+            ctx.lineTo(-10, -45 + giggleOffsetY);
+            ctx.moveTo(8, -55 + giggleOffsetY);
+            ctx.lineTo(8, -45 + giggleOffsetY);
             ctx.stroke();
 
-            const eyeX = dir * 13;
+            const headY = -74 + giggleOffsetY * 0.45;
+            ctx.save();
+            ctx.translate(0, headY);
+
+            if (this.avatarType === 'polarbear') {
+                [-21, 21].forEach(ex => {
+                    ctx.fillStyle = this.hurtTimer > 0 ? '#fecaca' : '#f8fafc';
+                    ctx.strokeStyle = '#0f172a';
+                    ctx.lineWidth = 2.8;
+                    ctx.beginPath();
+                    ctx.arc(ex, -21, 10.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.beginPath();
+                    ctx.arc(ex, -21, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            } else if (this.avatarType === 'arcticfox') {
+                [
+                    { bx1: -25, by1: -12, tx: -30, ty: -41, bx2: -8, by2: -22 },
+                    { bx1: 25,  by1: -12, tx: 30,  ty: -41, bx2: 8,  by2: -22 }
+                ].forEach(e => {
+                    ctx.fillStyle = this.hurtTimer > 0 ? '#fecaca' : '#f97316';
+                    ctx.strokeStyle = '#0f172a';
+                    ctx.lineWidth = 2.8;
+                    ctx.beginPath();
+                    ctx.moveTo(e.bx1, e.by1);
+                    ctx.lineTo(e.tx, e.ty);
+                    ctx.lineTo(e.bx2, e.by2);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#431407';
+                    ctx.beginPath();
+                    ctx.moveTo((e.bx1 + e.tx) * 0.5, (e.by1 + e.ty) * 0.5);
+                    ctx.lineTo(e.tx * 0.88, e.ty * 0.86);
+                    ctx.lineTo((e.bx2 + e.tx) * 0.5, (e.by2 + e.ty) * 0.5);
+                    ctx.closePath();
+                    ctx.fill();
+                });
+            }
+
+            if (this.avatarType === 'penguin') {
+                ctx.fillStyle = this.hurtTimer > 0 ? '#ef4444' : '#1e293b';
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(0, 0, 29, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(dir * 5 - 5, 1, 14, 0, Math.PI * 2);
+                ctx.arc(dir * 5 + 9, 1, 14, 0, Math.PI * 2);
+                ctx.ellipse(dir * 6, 8, 20, 15, 0, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (this.avatarType === 'polarbear') {
+                const bearHeadGrad = ctx.createRadialGradient(-dir * 6, -8, 4, 0, 0, 31);
+                bearHeadGrad.addColorStop(0, this.hurtTimer > 0 ? '#fecaca' : '#ffffff');
+                bearHeadGrad.addColorStop(1, this.hurtTimer > 0 ? '#fca5a5' : '#e2e8f0');
+                ctx.fillStyle = bearHeadGrad;
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(0, 0, 30, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.strokeStyle = '#cbd5e1';
+                ctx.lineWidth = 1.8;
+                ctx.beginPath();
+                ctx.ellipse(dir * 13, 8, 13.5, 10.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            } else {
+                const foxHeadGrad = ctx.createRadialGradient(-dir * 6, -8, 4, 0, 0, 29);
+                foxHeadGrad.addColorStop(0, this.hurtTimer > 0 ? '#fecaca' : '#fb923c');
+                foxHeadGrad.addColorStop(1, this.hurtTimer > 0 ? '#fca5a5' : '#ea580c');
+                ctx.fillStyle = foxHeadGrad;
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(0, 0, 28, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#fff7ed';
+                ctx.beginPath();
+                ctx.moveTo(-26, 4);
+                ctx.lineTo(-34, 10);
+                ctx.lineTo(-22, 15);
+                ctx.moveTo(26, 4);
+                ctx.lineTo(34, 10);
+                ctx.lineTo(22, 15);
+                ctx.fill();
+
+                ctx.fillStyle = '#fff7ed';
+                ctx.beginPath();
+                ctx.ellipse(dir * 14, 8, 14, 9, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            ctx.fillStyle = isLaughing ? 'rgba(244, 63, 94, 0.56)' : 'rgba(251, 113, 133, 0.42)';
+            ctx.beginPath();
+            ctx.ellipse(dir * 16, 7, 6.2, 3.8, 0, 0, Math.PI * 2);
+            ctx.ellipse(-dir * 3, 8, 4.5, 3.0, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            const eyeX = dir * 11;
             const eyeY = -4;
-            if (this.isBlinking) {
+            if (isLaughing) {
+                // Kıs kıs gülen kısık gözler
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 3.2;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.arc(eyeX - 6, eyeY + 2, 5.8, Math.PI * 1.15, Math.PI * 1.85);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(eyeX + 7, eyeY + 2, 5.8, Math.PI * 1.15, Math.PI * 1.85);
+                ctx.stroke();
+            } else if (this.isBlinking) {
                 ctx.strokeStyle = '#0f172a';
                 ctx.lineWidth = 3;
                 ctx.beginPath();
@@ -1284,130 +1499,151 @@
                 ctx.strokeStyle = '#0f172a';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.arc(eyeX - 6, eyeY, 7.8, 0, Math.PI * 2);
-                ctx.arc(eyeX + 7, eyeY, 7.8, 0, Math.PI * 2);
+                ctx.arc(eyeX - 6, eyeY, 6.8, 0, Math.PI * 2);
+                ctx.arc(eyeX + 7, eyeY, 6.8, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
 
-                const lookX = Math.cos(this.aimAngle) * 2.6;
-                const lookY = Math.sin(this.aimAngle) * 2.2;
+                const lookX = Math.cos(this.aimAngle) * 2.3;
+                const lookY = Math.sin(this.aimAngle) * 1.9;
                 ctx.fillStyle = '#0f172a';
                 ctx.beginPath();
-                ctx.arc(eyeX - 4 + lookX, eyeY + lookY, 3.8, 0, Math.PI * 2);
-                ctx.arc(eyeX + 9 + lookX, eyeY + lookY, 3.8, 0, Math.PI * 2);
+                ctx.arc(eyeX - 4.5 + lookX, eyeY + lookY, 3.4, 0, Math.PI * 2);
+                ctx.arc(eyeX + 8.5 + lookX, eyeY + lookY, 3.4, 0, Math.PI * 2);
                 ctx.fill();
 
                 ctx.fillStyle = '#ffffff';
                 ctx.beginPath();
-                ctx.arc(eyeX - 5.2 + lookX, eyeY - 1.6 + lookY, 1.6, 0, Math.PI * 2);
-                ctx.arc(eyeX + 7.8 + lookX, eyeY - 1.6 + lookY, 1.6, 0, Math.PI * 2);
+                ctx.arc(eyeX - 5.6 + lookX, eyeY - 1.4 + lookY, 1.4, 0, Math.PI * 2);
+                ctx.arc(eyeX + 7.4 + lookX, eyeY - 1.4 + lookY, 1.4, 0, Math.PI * 2);
                 ctx.fill();
 
                 if (this.charging || this.rapidTimer > 0) {
                     ctx.strokeStyle = '#0f172a';
-                    ctx.lineWidth = 3;
+                    ctx.lineWidth = 2.8;
                     ctx.beginPath();
-                    ctx.moveTo(eyeX - 12, eyeY - 11);
-                    ctx.lineTo(eyeX, eyeY - 6);
-                    ctx.moveTo(eyeX + 13, eyeY - 11);
+                    ctx.moveTo(eyeX - 11, eyeY - 10);
+                    ctx.lineTo(eyeX - 1, eyeY - 6);
+                    ctx.moveTo(eyeX + 12, eyeY - 10);
                     ctx.lineTo(eyeX + 2, eyeY - 6);
-                    ctx.stroke();
-                } else {
-                    ctx.strokeStyle = '#0f172a';
-                    ctx.lineWidth = 2.4;
-                    ctx.beginPath();
-                    ctx.arc(eyeX - 6, eyeY - 8, 5, Math.PI * 1.15, Math.PI * 1.85);
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.arc(eyeX + 7, eyeY - 8, 5, Math.PI * 1.15, Math.PI * 1.85);
                     ctx.stroke();
                 }
             }
 
             ctx.strokeStyle = '#0f172a';
-            ctx.lineWidth = 2.5;
-            if (this.charging) {
-                ctx.fillStyle = '#fb7185';
+            ctx.lineWidth = 2.3;
+            if (this.avatarType === 'penguin') {
+                ctx.fillStyle = '#f59e0b';
                 ctx.beginPath();
-                ctx.ellipse(dir * 13, 14, 5.5, 6.5, 0, 0, Math.PI * 2);
+                ctx.moveTo(dir * 7, 3);
+                ctx.lineTo(dir * 25, 7);
+                ctx.lineTo(dir * 7, 11);
+                ctx.closePath();
                 ctx.fill();
                 ctx.stroke();
-            } else if (!this.grounded && this.vy < -100) {
-                ctx.fillStyle = '#fda4af';
+
+                if (isLaughing) {
+                    const beakOpen = 1.4 + Math.abs(Math.sin(this.gigglePhase * 0.9)) * 1.8;
+                    ctx.fillStyle = '#d97706';
+                    ctx.beginPath();
+                    ctx.moveTo(dir * 8, 9);
+                    ctx.lineTo(dir * 21, 9 + beakOpen);
+                    ctx.lineTo(dir * 8, 11.5 + beakOpen);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                }
+            } else {
+                ctx.fillStyle = '#0f172a';
                 ctx.beginPath();
-                ctx.arc(dir * 13, 13, 5, 0, Math.PI * 2);
+                if (this.avatarType === 'polarbear') {
+                    ctx.ellipse(dir * 17, 4, 5.4, 3.8, 0, 0, Math.PI * 2);
+                } else {
+                    ctx.ellipse(dir * 21, 5, 4.4, 3.2, 0, 0, Math.PI * 2);
+                }
+                ctx.fill();
+
+                if (isLaughing) {
+                    const mouthPulse = 2.0 + Math.abs(Math.sin(this.gigglePhase * 0.9)) * 1.9;
+                    ctx.fillStyle = '#fb7185';
+                    ctx.beginPath();
+                    ctx.ellipse(dir * 13, 11, 5.8, mouthPulse, 0, 0, Math.PI);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+                } else if (this.charging) {
+                    ctx.fillStyle = '#fb7185';
+                    ctx.beginPath();
+                    ctx.ellipse(dir * 13, 13, 4.8, 5.5, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(dir * 13, 9, 6.2, 0.14 * Math.PI, 0.86 * Math.PI);
+                    ctx.stroke();
+                }
+            }
+
+            ctx.fillStyle = hatMain;
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 2.4;
+            ctx.beginPath();
+            ctx.arc(0, -14, 24, Math.PI * 1.12, Math.PI * 1.88);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.roundRect(-24, -21, 48, 8.5, 4.5);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(-dir * 4, -41, 8.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.restore();
+
+            const armBob = isLaughing
+                ? Math.sin(this.gigglePhase) * 2.8
+                : Math.sin(animT * 1.6) * 4;
+            ctx.save();
+            if (this.avatarType === 'penguin') {
+                ctx.translate(isLaughing ? dir * 12 : dir * 10, -34 + giggleOffsetY * 0.75 + armBob);
+                ctx.rotate(isLaughing ? -dir * 0.52 : -dir * 0.35);
+                ctx.fillStyle = '#0f172a';
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 2.4;
+                ctx.beginPath();
+                ctx.ellipse(0, 6, 7.5, 16, 0, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
             } else {
-                ctx.fillStyle = '#fda4af';
+                const armFill = this.hurtTimer > 0
+                    ? '#fecaca'
+                    : (this.avatarType === 'arcticfox' ? '#f97316' : '#ffffff');
+                ctx.fillStyle = armFill;
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 2.5;
                 ctx.beginPath();
-                ctx.arc(dir * 13, 10, 7.5, 0.1 * Math.PI, 0.9 * Math.PI);
-                ctx.closePath();
+                if (isLaughing) {
+                    ctx.arc(dir * 23, -35 + giggleOffsetY + armBob, 8.8, 0, Math.PI * 2);
+                } else {
+                    ctx.arc(dir * 26, -34 + giggleOffsetY * 0.6 + armBob, 8.8, 0, Math.PI * 2);
+                }
                 ctx.fill();
                 ctx.stroke();
             }
-
-            if (this.avatarType === 'goggles') {
-                ctx.fillStyle = isBlue ? '#1d4ed8' : '#b91c1c';
-                ctx.strokeStyle = '#0f172a';
-                ctx.lineWidth = 2.5;
-                ctx.beginPath();
-                ctx.roundRect(-36, -24, 72, 16, 8);
-                ctx.fill();
-                ctx.stroke();
-
-                ctx.fillStyle = '#38bdf8';
-                ctx.strokeStyle = '#0f172a';
-                ctx.lineWidth = 2.5;
-                ctx.beginPath();
-                ctx.roundRect(-24, -18, 20, 14, 5);
-                ctx.roundRect(4, -18, 20, 14, 5);
-                ctx.fill();
-                ctx.stroke();
-            } else if (this.avatarType === 'icecrown') {
-                ctx.fillStyle = '#7dd3fc';
-                ctx.strokeStyle = '#0284c7';
-                ctx.lineWidth = 2.5;
-                ctx.beginPath();
-                ctx.moveTo(-32, -16);
-                ctx.lineTo(-24, -44);
-                ctx.lineTo(-8, -26);
-                ctx.lineTo(0, -48);
-                ctx.lineTo(8, -26);
-                ctx.lineTo(24, -44);
-                ctx.lineTo(32, -16);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-            } else {
-                ctx.fillStyle = isBlue ? '#2563eb' : '#dc2626';
-                ctx.strokeStyle = '#0f172a';
-                ctx.lineWidth = 2.5;
-                ctx.beginPath();
-                ctx.arc(0, -10, this.headRadius + 1, Math.PI * 1.05, Math.PI * 1.95);
-                ctx.closePath();
-                ctx.fill();
-                ctx.stroke();
-
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath();
-                ctx.roundRect(-35, -18, 70, 11, 5);
-                ctx.fill();
-                ctx.stroke();
-
-                ctx.fillStyle = '#ffffff';
-                ctx.beginPath();
-                ctx.arc(-dir * 6, -47, 10.5, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-            }
+            ctx.restore();
 
             if (this.frozenTimer > 0) {
                 ctx.fillStyle = 'rgba(125, 211, 252, 0.55)';
                 ctx.strokeStyle = '#e0f2fe';
                 ctx.lineWidth = 3;
                 ctx.beginPath();
-                ctx.roundRect(-43, -53, 86, 98, 12);
+                ctx.roundRect(-45, -112, 90, 114, 14);
                 ctx.fill();
                 ctx.stroke();
             }
@@ -1435,7 +1671,7 @@
                 ctx.restore();
             }
 
-            const topY = this.isDucking ? -68 : -108;
+            const topY = this.isDucking ? -84 : -124;
             ctx.font = '800 13px Fredoka, sans-serif';
             ctx.textAlign = 'center';
             ctx.fillStyle = '#0f172a';
@@ -1483,7 +1719,7 @@
     function grantMysteryPower(player, box) {
         sfx.playPowerup();
         spawnSnowPuff(box.x, box.y, 20, box.color);
-        spawnFloatingText(player.x, player.y - 110, `${box.icon} ${box.label}`, box.color);
+        spawnFloatingText(player.x, player.y - 122, `${box.icon} ${box.label}`, box.color);
 
         if (box.type === 'mega') player.megaAmmo = 2;
         else if (box.type === 'freeze') player.freezeAmmo = 2;
@@ -1873,7 +2109,7 @@
                     isHuman: s.isHuman,
                     controlScheme: s.controlScheme,
                     x: bPos[i] ?? 260,
-                    avatarType: s.isHuman ? config.avatarType : 'beanie',
+                    avatarType: s.isHuman ? config.avatarType : 'polarbear',
                     aiDifficulty: s.aiDifficulty || config.difficulty || 'medium'
                 }));
             });
@@ -1885,29 +2121,29 @@
                     isHuman: s.isHuman,
                     controlScheme: s.isHuman ? 'p2' : 'ai',
                     x: rPos[i] ?? (WORLD_W - 260),
-                    avatarType: 'goggles',
+                    avatarType: 'penguin',
                     aiDifficulty: s.aiDifficulty || config.difficulty || 'medium'
                 }));
             });
         } else if (!is2v2) {
             state.players.push(new SnowFighterCharacter({
-                id: 1, name: 'Mavi Kışçı', team: 'blue', isHuman: true, controlScheme: 'p1', x: 300, avatarType: config.avatarType
+                id: 1, name: 'Mavi Ayı', team: 'blue', isHuman: true, controlScheme: 'p1', x: 300, avatarType: config.avatarType
             }));
             state.players.push(new SnowFighterCharacter({
-                id: 2, name: 'Kızıl Bot', team: 'red', isHuman: false, controlScheme: 'ai', x: WORLD_W - 300, avatarType: 'goggles', aiDifficulty: config.difficulty
+                id: 2, name: 'Kırmızı Penguen', team: 'red', isHuman: false, controlScheme: 'ai', x: WORLD_W - 300, avatarType: 'penguin', aiDifficulty: config.difficulty
             }));
         } else {
             state.players.push(new SnowFighterCharacter({
                 id: 1, name: '1. Oyuncu', team: 'blue', isHuman: true, controlScheme: 'p1', x: 210, avatarType: config.avatarType
             }));
             state.players.push(new SnowFighterCharacter({
-                id: 2, name: 'Mavi Ortak', team: 'blue', isHuman: false, controlScheme: 'ai', x: 440, avatarType: 'icecrown', aiDifficulty: config.difficulty
+                id: 2, name: 'Mavi Tilki', team: 'blue', isHuman: false, controlScheme: 'ai', x: 440, avatarType: 'arcticfox', aiDifficulty: config.difficulty
             }));
             state.players.push(new SnowFighterCharacter({
-                id: 3, name: 'Kızıl Kaptan', team: 'red', isHuman: false, controlScheme: 'ai', x: WORLD_W - 210, avatarType: 'goggles', aiDifficulty: config.difficulty
+                id: 3, name: 'Kırmızı Penguen', team: 'red', isHuman: false, controlScheme: 'ai', x: WORLD_W - 210, avatarType: 'penguin', aiDifficulty: config.difficulty
             }));
             state.players.push(new SnowFighterCharacter({
-                id: 4, name: 'Kızıl Bot', team: 'red', isHuman: false, controlScheme: 'ai', x: WORLD_W - 440, avatarType: 'beanie', aiDifficulty: config.difficulty
+                id: 4, name: 'Kızıl Ayı', team: 'red', isHuman: false, controlScheme: 'ai', x: WORLD_W - 440, avatarType: 'polarbear', aiDifficulty: config.difficulty
             }));
         }
 
@@ -2120,7 +2356,6 @@
             p.updateCampIcicles(dt);
         }
 
-        // Orta buz engelinin yanında 3 sn bekleyenlere düşen buz sarkıtları
         for (let i = state.icicles.length - 1; i >= 0; i--) {
             const ic = state.icicles[i];
             ic.vy += GRAVITY * 0.55 * dt;
@@ -2234,7 +2469,6 @@
         ctx.closePath();
         ctx.fill();
 
-        // Orta engel çevresindeki sarkıt uyarı bölgesi çizgisi
         ctx.save();
         ctx.strokeStyle = 'rgba(125, 211, 252, 0.38)';
         ctx.lineWidth = 2;
