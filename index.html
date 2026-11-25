@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <title>Kartopu Savaşı</title>
@@ -24,7 +24,7 @@
             background-color: #061021;
             color: #0f172a;
         }
-        canvas, #touch-controls {
+        canvas, #touch-controls, .touch-pad-btn, .touch-throw-btn {
             touch-action: none;
         }
         canvas {
@@ -194,22 +194,20 @@
         }
 
         #touch-controls {
-            position: fixed; inset: 0; z-index: 20; pointer-events: none;
+            position: fixed; inset: 0; z-index: 28; pointer-events: none;
         }
-        .touch-group-left {
-            pointer-events: auto; position: fixed; bottom: 16px; left: 16px;
-            display: flex; gap: 10px;
-        }
-        .touch-group-right {
-            pointer-events: auto; position: fixed; bottom: 16px; right: 16px;
-            display: flex; align-items: flex-end; gap: 10px;
+        .touch-btn-item {
+            position: fixed;
+            pointer-events: auto;
+            z-index: 28;
         }
         .touch-pad-btn {
             width: 64px; height: 64px; border-radius: 18px;
-            background: rgba(15, 23, 42, 0.58);
-            border: 3px solid rgba(255, 255, 255, 0.78);
+            background: rgba(15, 23, 42, 0.62);
+            border: 3px solid rgba(255, 255, 255, 0.82);
             color: #fff; font-weight: 800;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.28);
         }
         .touch-pad-btn.pressed {
             background: rgba(56, 189, 248, 0.88);
@@ -222,6 +220,44 @@
             color: #fff; font-weight: 900;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             box-shadow: 0 0 22px rgba(56, 189, 248, 0.85);
+        }
+
+        /* Buton Yerini Ayarla Modu */
+        body.layout-editing #touch-controls {
+            z-index: 45;
+            background: rgba(2, 6, 23, 0.48);
+            pointer-events: auto;
+        }
+        body.layout-editing .touch-btn-item {
+            outline: 2.5px dashed #fcd34d;
+            outline-offset: 3px;
+            cursor: grab;
+        }
+        body.layout-editing .touch-btn-item.dragging-btn {
+            cursor: grabbing;
+            outline-color: #34d399;
+            filter: brightness(1.15);
+            z-index: 48;
+        }
+        #layout-editor-bar {
+            position: fixed;
+            top: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
+            pointer-events: auto;
+            background: rgba(15, 23, 42, 0.96);
+            border: 2.5px solid #fbbf24;
+            border-radius: 18px;
+            padding: 8px 14px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 14px 32px rgba(0,0,0,0.45);
+            max-width: 95vw;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
         .modal-backdrop {
@@ -291,13 +327,11 @@
             border-radius: 5px; font-size: 11px; font-family: ui-monospace, monospace;
         }
         #portrait-warning { display: none; }
-        @media screen and (orientation: portrait) and (max-width: 768px) {
-            #portrait-warning {
-                display: flex; position: fixed; inset: 0; z-index: 60;
-                background: rgba(2, 6, 23, 0.96); color: #fff;
-                flex-direction: column; align-items: center; justify-content: center;
-                padding: 24px; text-align: center;
-            }
+        body.in-match.is-portrait #portrait-warning {
+            display: flex; position: fixed; inset: 0; z-index: 60;
+            background: rgba(2, 6, 23, 0.96); color: #fff;
+            flex-direction: column; align-items: center; justify-content: center;
+            padding: 24px; text-align: center;
         }
     </style>
 </head>
@@ -306,7 +340,7 @@
     <div id="portrait-warning">
         <div style="font-size:52px;margin-bottom:12px;">📱🔄</div>
         <h2 style="margin:0 0 8px 0;color:#7dd3fc;">Ekranı Yatay Çevirin</h2>
-        <p style="margin:0;color:#cbd5e1;font-size:14px;">Kartopu Savaşı yatay ekranda en keyifli şekilde oynanır.</p>
+        <p style="margin:0;color:#cbd5e1;font-size:14px;">Maç sırasında telefonu yatay tutarak daha rahat oynayabilirsiniz.</p>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -354,6 +388,7 @@
             </div>
             <div class="flex flex-col gap-1">
                 <button id="btn-mute" type="button" class="icon-btn" title="Ses">🔊</button>
+                <button id="btn-edit-pad" type="button" class="icon-btn" title="Tuş Yerini Ayarla">🎛️</button>
                 <button id="btn-menu-exit" type="button" class="icon-btn" title="Ana Menü">🏠</button>
             </div>
         </div>
@@ -367,26 +402,28 @@
         </div>
     </div>
 
-    <!-- DOKUNMATİK KONTROLLER -->
+    <!-- DOKUNMATİK KONTROLLER + TUŞ KONUM DÜZENLEYİCİ -->
     <div id="touch-controls" class="hidden">
-        <div class="touch-group-left">
-            <button id="t-left" type="button" class="touch-pad-btn" style="font-size:26px;">◀</button>
-            <button id="t-right" type="button" class="touch-pad-btn" style="font-size:26px;">▶</button>
+        <div id="layout-editor-bar" class="hidden">
+            <span style="font-size:12px;font-weight:900;color:#fcd34d;">🎛️ Tuşları sürükleyip bırakın</span>
+            <button id="btn-reset-pad" type="button" class="small-btn" style="background:#475569;color:#fff;">Varsayılan Yer</button>
+            <button id="btn-done-pad" type="button" class="small-btn" style="background:#16a34a;color:#fff;">Kaydet &amp; Bitir</button>
         </div>
-        <div class="touch-group-right">
-            <button id="t-duck" type="button" class="touch-pad-btn">
-                <span style="font-size:20px;">🔽</span>
-                <span style="font-size:10px;">EĞİL</span>
-            </button>
-            <button id="t-jump" type="button" class="touch-pad-btn">
-                <span style="font-size:20px;">🔼</span>
-                <span style="font-size:10px;">ZIPLA</span>
-            </button>
-            <button id="t-throw" type="button" class="touch-throw-btn">
-                <span style="font-size:26px;">❄️</span>
-                <span style="font-size:11px;">AT</span>
-            </button>
-        </div>
+
+        <button id="t-left" type="button" class="touch-btn-item touch-pad-btn" style="font-size:26px;">◀</button>
+        <button id="t-right" type="button" class="touch-btn-item touch-pad-btn" style="font-size:26px;">▶</button>
+        <button id="t-duck" type="button" class="touch-btn-item touch-pad-btn">
+            <span style="font-size:20px;">🔽</span>
+            <span style="font-size:10px;">EĞİL</span>
+        </button>
+        <button id="t-jump" type="button" class="touch-btn-item touch-pad-btn">
+            <span style="font-size:20px;">🔼</span>
+            <span style="font-size:10px;">ZIPLA</span>
+        </button>
+        <button id="t-throw" type="button" class="touch-btn-item touch-throw-btn">
+            <span style="font-size:26px;">❄️</span>
+            <span style="font-size:11px;">AT</span>
+        </button>
     </div>
 
     <!-- ANA MENÜ -->
@@ -504,12 +541,15 @@
 
             <div class="grid-2" style="font-size:12px;">
                 <div class="box-card">
-                    <div class="flex items-center justify-between" style="font-weight:900;color:#0c4a6e;margin-bottom:4px;">
+                    <div class="flex items-center justify-between flex-wrap gap-2" style="font-weight:900;color:#0c4a6e;margin-bottom:4px;">
                         <span>🕹️ Kontroller</span>
-                        <label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;">
-                            <input type="checkbox" id="toggle-touch-ui">
-                            <span>Dokunmatik Tuşlar</span>
-                        </label>
+                        <div class="flex items-center gap-2">
+                            <label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;">
+                                <input type="checkbox" id="toggle-touch-ui">
+                                <span>Dokunmatik Tuşlar</span>
+                            </label>
+                            <button id="btn-menu-edit-pad" type="button" class="small-btn" style="background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;padding:3px 8px;">🎛️ Yer Ayarla</button>
+                        </div>
                     </div>
                     <div style="color:#334155;font-weight:600;line-height:1.5;">
                         <div><b style="color:#2563eb;">1. Oyuncu (Mavi):</b> <kbd>A / D</kbd> Yürü • <kbd>W</kbd> Zıpla • <kbd>S</kbd> Eğil • <kbd>Space</kbd> At</div>
@@ -727,6 +767,15 @@
     let scaleX = 1;
     let scaleY = 1;
 
+    function syncOrientationState() {
+        const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+        const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        const isPortrait = vh > vw;
+        document.body.classList.toggle('is-portrait', isPortrait);
+        const inMatch = ['playing', 'roundIntro', 'roundEnd', 'netclient'].includes(state.screen);
+        document.body.classList.toggle('in-match', inMatch);
+    }
+
     function resizeCanvas() {
         const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
         const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
@@ -734,6 +783,8 @@
         canvas.height = vh || window.innerHeight || 720;
         scaleX = canvas.width / WORLD_W;
         scaleY = canvas.height / WORLD_H;
+        syncOrientationState();
+        applySavedPadPositions();
     }
     function nudgeAddressBar() {
         resizeCanvas();
@@ -749,11 +800,18 @@
     if (window.visualViewport) window.visualViewport.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    function requestFullscreenSafe() {
+    function enterLandscapeMatch() {
+        syncOrientationState();
+        try {
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(() => {});
+            }
+        } catch (_) {}
         const el = document.documentElement;
         if (!document.fullscreenElement && el.requestFullscreen) {
             el.requestFullscreen().catch(() => {});
         }
+        nudgeAddressBar();
     }
 
     const rand = (min, max) => Math.random() * (max - min) + min;
@@ -804,6 +862,7 @@
 
     const keys = {};
     const touchState = { left: false, right: false, jump: false, duck: false, throw: false };
+    let isEditingPad = false;
 
     class ArenaCharacter {
         constructor({ id, name, team, isHuman, controlScheme, x, avatarType = 'beanie' }) {
@@ -1036,7 +1095,6 @@
                 this.jumpsLeft = 2;
             }
 
-            // Orta tehlike bölgesi cezaları: eğilince buz bloğu (3 sn), ayakta/dolaşarak kalınca sivri buz sarkıtı (3 sn)
             const inCenterZone = Math.abs(this.x - MOUND_X) <= CENTER_DANGER_HALF_W;
             if (inCenterZone && this.grounded) {
                 if (this.isDucking) {
@@ -1707,8 +1765,6 @@
 
     function startMatch() {
         sfx.init();
-        requestFullscreenSafe();
-        nudgeAddressBar();
         state.round = 1;
         state.blueScore = 0;
         state.redScore = 0;
@@ -1759,8 +1815,8 @@
         document.getElementById('main-menu').classList.add('hidden');
         document.getElementById('gameover-modal').classList.add('hidden');
         document.getElementById('hud').classList.remove('hidden');
-        syncTouchVisibility();
         setupRound();
+        enterLandscapeMatch();
     }
 
     function setupRound() {
@@ -1780,13 +1836,17 @@
         reds.forEach((p, i) => p.reset(rPos[i] ?? (WORLD_W - 260)));
 
         updateHUD();
+        syncTouchVisibility();
         state.screen = 'roundIntro';
+        syncOrientationState();
         showBanner(`${state.round}. TUR BAŞLIYOR!`, 'Ortada eğilince buz, ayakta kalınca sivri sarkıt düşer!');
 
         setTimeout(() => {
             if (state.screen === 'roundIntro') {
                 hideBanner();
                 state.screen = 'playing';
+                syncOrientationState();
+                syncTouchVisibility();
             }
         }, 1500);
     }
@@ -1798,6 +1858,7 @@
 
         if (!blueAlive || !redAlive || timeExpired) {
             state.screen = 'roundEnd';
+            syncOrientationState();
             let winnerTeam = 'blue';
             if (!blueAlive && redAlive) winnerTeam = 'red';
             else if (!redAlive && blueAlive) winnerTeam = 'blue';
@@ -1828,6 +1889,8 @@
 
     function showGameOver(winnerTeam) {
         state.screen = 'gameOver';
+        syncOrientationState();
+        setPadEditMode(false);
         document.getElementById('hud').classList.add('hidden');
         syncTouchVisibility();
 
@@ -2297,32 +2360,206 @@
     });
     window.addEventListener('keyup', e => { keys[e.code] = false; });
 
-    function bindTouchButton(id, prop) {
-        const el = document.getElementById(id);
-        const press = (e) => { e.preventDefault(); touchState[prop] = true; el.classList.add('pressed'); };
-        const release = (e) => { e.preventDefault(); touchState[prop] = false; el.classList.remove('pressed'); };
-        el.addEventListener('touchstart', press, { passive: false });
-        el.addEventListener('touchend', release);
-        el.addEventListener('touchcancel', release);
-        el.addEventListener('mousedown', press);
-        el.addEventListener('mouseup', release);
-        el.addEventListener('mouseleave', release);
+    /* --- DOKUNMATİK TUŞLAR + KONUM SÜRÜKLEME SİSTEMİ --- */
+    const PAD_STORAGE_KEY = 'kartopu_touch_pad_positions_v1';
+    const PAD_META = [
+        { id: 't-left',  prop: 'left',  w: 64, h: 64, defLeft: 16,     defBottom: 16 },
+        { id: 't-right', prop: 'right', w: 64, h: 64, defLeft: 90,     defBottom: 16 },
+        { id: 't-duck',  prop: 'duck',  w: 64, h: 64, defRight: 184,   defBottom: 16 },
+        { id: 't-jump',  prop: 'jump',  w: 64, h: 64, defRight: 110,   defBottom: 16 },
+        { id: 't-throw', prop: 'throw', w: 78, h: 78, defRight: 16,    defBottom: 16 }
+    ];
+
+    function loadSavedPadPositions() {
+        try {
+            const raw = localStorage.getItem(PAD_STORAGE_KEY);
+            return raw ? JSON.parse(raw) : {};
+        } catch (_) {
+            return {};
+        }
     }
-    bindTouchButton('t-left', 'left');
-    bindTouchButton('t-right', 'right');
-    bindTouchButton('t-jump', 'jump');
-    bindTouchButton('t-duck', 'duck');
-    bindTouchButton('t-throw', 'throw');
+
+    function savePadPositions(map) {
+        try {
+            localStorage.setItem(PAD_STORAGE_KEY, JSON.stringify(map));
+        } catch (_) {}
+    }
+
+    function applySavedPadPositions() {
+        const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+        const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        const saved = loadSavedPadPositions();
+
+        PAD_META.forEach(item => {
+            const el = document.getElementById(item.id);
+            if (!el) return;
+            const pos = saved[item.id];
+            if (pos && typeof pos.x === 'number' && typeof pos.y === 'number') {
+                const maxX = Math.max(8, vw - item.w - 8);
+                const maxY = Math.max(8, vh - item.h - 8);
+                el.style.left = clamp(pos.x, 8, maxX) + 'px';
+                el.style.top = clamp(pos.y, 8, maxY) + 'px';
+                el.style.right = 'auto';
+                el.style.bottom = 'auto';
+            } else {
+                el.style.top = 'auto';
+                if (typeof item.defLeft === 'number') {
+                    el.style.left = item.defLeft + 'px';
+                    el.style.right = 'auto';
+                } else {
+                    el.style.right = item.defRight + 'px';
+                    el.style.left = 'auto';
+                }
+                el.style.bottom = item.defBottom + 'px';
+            }
+        });
+    }
+
+    function resetPadPositions() {
+        savePadPositions({});
+        applySavedPadPositions();
+    }
+
+    function clearTouchStates() {
+        touchState.left = false;
+        touchState.right = false;
+        touchState.jump = false;
+        touchState.duck = false;
+        touchState.throw = false;
+        PAD_META.forEach(item => {
+            const el = document.getElementById(item.id);
+            if (el) el.classList.remove('pressed', 'dragging-btn');
+        });
+    }
+
+    function setPadEditMode(enable) {
+        isEditingPad = !!enable;
+        clearTouchStates();
+        document.body.classList.toggle('layout-editing', isEditingPad);
+        document.getElementById('layout-editor-bar').classList.toggle('hidden', !isEditingPad);
+        if (isEditingPad) {
+            const touchControls = document.getElementById('touch-controls');
+            touchControls.classList.remove('hidden');
+            PAD_META.forEach(item => {
+                const el = document.getElementById(item.id);
+                if (!el) return;
+                const rect = el.getBoundingClientRect();
+                el.style.left = rect.left + 'px';
+                el.style.top = rect.top + 'px';
+                el.style.right = 'auto';
+                el.style.bottom = 'auto';
+            });
+        } else {
+            applySavedPadPositions();
+            syncTouchVisibility();
+        }
+    }
+
+    function bindDraggableTouchButton(meta) {
+        const el = document.getElementById(meta.id);
+        let dragState = null;
+
+        const onDown = (e) => {
+            e.preventDefault();
+            if (isEditingPad) {
+                const pt = e.touches ? e.touches[0] : e;
+                const rect = el.getBoundingClientRect();
+                dragState = {
+                    offsetX: pt.clientX - rect.left,
+                    offsetY: pt.clientY - rect.top
+                };
+                el.classList.add('dragging-btn');
+                return;
+            }
+            touchState[meta.prop] = true;
+            el.classList.add('pressed');
+        };
+
+        const onMove = (e) => {
+            if (!isEditingPad || !dragState) return;
+            e.preventDefault();
+            const pt = e.touches ? e.touches[0] : e;
+            const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+            const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+            const rect = el.getBoundingClientRect();
+            const nx = clamp(pt.clientX - dragState.offsetX, 8, Math.max(8, vw - rect.width - 8));
+            const ny = clamp(pt.clientY - dragState.offsetY, 8, Math.max(8, vh - rect.height - 8));
+            el.style.left = nx + 'px';
+            el.style.top = ny + 'px';
+            el.style.right = 'auto';
+            el.style.bottom = 'auto';
+        };
+
+        const onUp = (e) => {
+            if (isEditingPad && dragState) {
+                e.preventDefault();
+                dragState = null;
+                el.classList.remove('dragging-btn');
+                const saved = loadSavedPadPositions();
+                const rect = el.getBoundingClientRect();
+                saved[meta.id] = { x: Math.round(rect.left), y: Math.round(rect.top) };
+                savePadPositions(saved);
+                return;
+            }
+            touchState[meta.prop] = false;
+            el.classList.remove('pressed');
+        };
+
+        el.addEventListener('touchstart', onDown, { passive: false });
+        window.addEventListener('touchmove', onMove, { passive: false });
+        window.addEventListener('touchend', onUp);
+        window.addEventListener('touchcancel', onUp);
+
+        el.addEventListener('mousedown', onDown);
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+        el.addEventListener('mouseleave', () => {
+            if (!isEditingPad) {
+                touchState[meta.prop] = false;
+                el.classList.remove('pressed');
+            }
+        });
+    }
+
+    PAD_META.forEach(bindDraggableTouchButton);
+    applySavedPadPositions();
+
+    window.addEventListener('blur', clearTouchStates);
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) clearTouchStates();
+    });
 
     const touchToggle = document.getElementById('toggle-touch-ui');
     const touchControlsEl = document.getElementById('touch-controls');
     if ('ontouchstart' in window || navigator.maxTouchPoints > 0) touchToggle.checked = true;
 
     function syncTouchVisibility() {
-        const visible = touchToggle.checked && (state.screen === 'playing' || state.screen === 'roundIntro');
+        if (isEditingPad) {
+            touchControlsEl.classList.remove('hidden');
+            return;
+        }
+        const activeScreen = ['playing', 'roundIntro', 'netclient'].includes(state.screen);
+        const visible = touchToggle.checked && activeScreen;
         touchControlsEl.classList.toggle('hidden', !visible);
+        if (visible) applySavedPadPositions();
     }
     touchToggle.addEventListener('change', syncTouchVisibility);
+
+    document.getElementById('btn-edit-pad').addEventListener('click', () => {
+        setPadEditMode(!isEditingPad);
+    });
+    document.getElementById('btn-menu-edit-pad').addEventListener('click', () => {
+        touchToggle.checked = true;
+        document.getElementById('main-menu').classList.add('hidden');
+        setPadEditMode(true);
+    });
+    document.getElementById('btn-reset-pad').addEventListener('click', resetPadPositions);
+    document.getElementById('btn-done-pad').addEventListener('click', () => {
+        setPadEditMode(false);
+        if (state.screen === 'menu') {
+            document.getElementById('main-menu').classList.remove('hidden');
+        }
+    });
 
     function syncLobbyVisibility() {
         const show = config.playersMode === 'online';
@@ -2407,6 +2644,8 @@
 
     function returnToMenu() {
         state.screen = 'menu';
+        syncOrientationState();
+        setPadEditMode(false);
         hideBanner();
         document.getElementById('hud').classList.add('hidden');
         document.getElementById('gameover-modal').classList.add('hidden');
@@ -2710,8 +2949,6 @@
     }
 
     function startClient(m) {
-      requestFullscreenSafe();
-      nudgeAddressBar();
       net.cMatch = m.matchId; net.gotFirst = false; net.bannerKey = ''; net.sigHud = '';
       state.players = Object.values(m.roster || {}).map(r => {
         const p = new ArenaCharacter({ id: r.id, name: r.n, team: r.t, isHuman: false, controlScheme: 'net', x: r.t === 'blue' ? 300 : WORLD_W - 300, avatarType: r.a });
@@ -2719,11 +2956,13 @@
         return p;
       });
       Object.assign(state, { snowballs: [], mysteryBoxes: [], fallingIceBlocks: [], particles: [], floatingTexts: [], round: 1, blueScore: 0, redScore: 0, roundTimer: 60, screen: 'netclient' });
+      syncOrientationState();
       $('main-menu').classList.add('hidden'); $('gameover-modal').classList.add('hidden');
       $('btn-rematch').classList.remove('hidden');
       $('hud').classList.remove('hidden'); hideBanner();
-      $('touch-controls').classList.toggle('hidden', !$('toggle-touch-ui').checked);
+      syncTouchVisibility();
       updateHUD();
+      enterLandscapeMatch();
     }
     function syncList(old, items, make, upd) {
       const m = new Map(old.map(o => [o.id, o]));
