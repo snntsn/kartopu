@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>Kafa Topu: Kartopu Savaşı</title>
+    <title>Kartopu Savaşı</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
     <style>
@@ -115,7 +115,7 @@
     <div id="portrait-warning" class="fixed inset-0 z-50 bg-slate-950/95 text-white flex-col items-center justify-center p-6 text-center">
         <div class="text-6xl mb-4 animate-bounce">📱🔄</div>
         <h2 class="text-2xl font-bold text-sky-300 mb-2">Ekranı Yatay Çevirin</h2>
-        <p class="text-slate-300 text-sm mb-4">Kafa Topu: Kartopu Savaşı geniş yatay sahada en keyifli şekilde oynanır!</p>
+        <p class="text-slate-300 text-sm mb-4">Kartopu Savaşı geniş yatay sahada en keyifli şekilde oynanır!</p>
         <button id="btn-retry-landscape" type="button" class="px-5 py-2.5 rounded-2xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-sm shadow cursor-pointer">
             🔄 Yatay Tam Ekran Dene
         </button>
@@ -188,7 +188,7 @@
         </div>
     </div>
 
-    <!-- DOKUNMATİK KONTROLLER (Sol Alt Hareket + Sağ Alt Nişan & Atış Joypad) -->
+    <!-- DOKUNMATİK KONTROLLER (Sol Alt Hareket + Sağ Alt Basılı Tut / Bırak At Tuşu) -->
     <div id="touch-controls" class="hidden fixed inset-0 z-20 pointer-events-none">
         <div id="btn-edit-touch-layout" class="hidden pointer-events-auto fixed top-16 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-slate-900/95 border-2 border-amber-400 text-white px-4 py-1.5 rounded-full shadow-xl text-xs font-black">
             <span>✋ Tuşları Sürükleyip Konumlandır</span>
@@ -210,12 +210,10 @@
         </div>
 
         <div id="touch-aim-cluster" class="pointer-events-auto fixed bottom-2.5 sm:bottom-4 right-2.5 sm:right-4 flex items-end gap-2">
-            <div id="t-aim-pad" class="relative w-20 h-20 sm:w-28 sm:h-28 rounded-full bg-gradient-to-b from-sky-500/75 to-blue-700/80 border-3 sm:border-4 border-white/90 shadow-[0_0_20px_rgba(56,189,248,0.65)] flex flex-col items-center justify-center text-white">
-                <div id="t-aim-knob" class="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white text-blue-700 font-black text-sm sm:text-base flex items-center justify-center shadow-md pointer-events-none transition-transform duration-75">
-                    ❄️
-                </div>
-                <span class="text-[8px] sm:text-[10px] font-black tracking-wide mt-0.5 pointer-events-none">SÜRÜKLE / AT</span>
-            </div>
+            <button id="t-aim-pad" type="button" class="touch-pad-btn relative w-20 h-20 sm:w-28 sm:h-28 rounded-full bg-gradient-to-b from-sky-500/80 to-blue-700/85 border-3 sm:border-4 border-white/90 shadow-[0_0_20px_rgba(56,189,248,0.65)] flex flex-col items-center justify-center text-white cursor-pointer">
+                <span class="text-xl sm:text-2xl leading-none pointer-events-none">❄️</span>
+                <span class="text-[11px] sm:text-xs font-black tracking-wide mt-1 pointer-events-none">AT</span>
+            </button>
         </div>
     </div>
 
@@ -227,7 +225,7 @@
                     ❄️ KARTOPU DÜELLOSU • GENİŞ YATAY ARENA ❄️
                 </div>
                 <h1 class="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-700 via-sky-500 to-red-600 tracking-tight">
-                    KAFA TOPU: KARTOPU SAVAŞI
+                    KARTOPU SAVAŞI
                 </h1>
                 <p class="text-slate-600 font-bold text-xs sm:text-sm mt-1">
                     Avatarını seç, 1. oyuncu modunu belirle; çevrimiçi odada istediğin slotlara bot ekleyip çıkarabilirsin.
@@ -651,10 +649,12 @@
         mouseActive: false,
         mouseCharging: false,
         touchAimActive: false,
-        touchAimAngle: -0.45,
-        touchAimPower: 0.65,
+        touchAimAngle: -0.52,
+        touchAimPower: 0.72,
         touchReleasePending: false
     };
+
+    const touchState = { left: false, right: false, jump: false, duck: false, fireHeld: false };
 
     const state = {
         screen: 'menu',
@@ -685,9 +685,8 @@
     }
 
     const keys = {};
-    const touchState = { left: false, right: false, jump: false, duck: false };
 
-    class HeadBallCharacter {
+    class SnowFighterCharacter {
         constructor({ id, name, team, isHuman, controlScheme, x, avatarType = 'beanie', aiDifficulty = 'medium' }) {
             this.id = id;
             this.name = name;
@@ -723,8 +722,8 @@
             this.superJumpTimer = 0;
 
             this.charging = false;
-            this.charge = 0.55;
-            this.aimAngle = team === 'blue' ? -0.45 : -(Math.PI - 0.45);
+            this.charge = 0.65;
+            this.aimAngle = team === 'blue' ? -0.52 : -(Math.PI - 0.52);
             this.cooldown = 0;
 
             this.blinkTimer = rand(1.5, 4);
@@ -760,8 +759,8 @@
             this.rapidTimer = 0;
             this.superJumpTimer = 0;
             this.charging = false;
-            this.charge = 0.55;
-            this.aimAngle = this.team === 'blue' ? -0.45 : -(Math.PI - 0.45);
+            this.charge = 0.65;
+            this.aimAngle = this.team === 'blue' ? -0.52 : -(Math.PI - 0.52);
             this.cooldown = 0.25;
             this.hurtTimer = 0;
         }
@@ -833,7 +832,7 @@
                 if (keys['KeyD'] || touchState.right) moveDir += 1;
                 wantJump = !!keys['KeyW'] || !!touchState.jump;
                 wantDuck = !!keys['KeyS'] || !!touchState.duck;
-                keyThrowHeld = !!keys['Space'];
+                keyThrowHeld = !!keys['Space'] || !!touchState.fireHeld;
 
                 if (aimInput.touchAimActive) {
                     this.aimAngle = aimInput.touchAimAngle;
@@ -863,7 +862,7 @@
                     if (keys['ArrowDown']) this.aimAngle += (this.team === 'blue' ? 1 : -1) * dt * 1.45;
                     if (keys['ArrowRight']) this.charge = clamp(this.charge + dt * 0.95, 0, 1);
                     else if (keys['ArrowLeft']) this.charge = clamp(this.charge - dt * 0.95, 0, 1);
-                    else this.charge = clamp(this.charge + dt * 0.85, 0.15, 1);
+                    else this.charge = clamp(this.charge + dt * 0.72, 0.25, 1);
                 }
             } else {
                 const aiCmd = this.thinkAI(dt);
@@ -1366,6 +1365,7 @@
 
             ctx.restore();
 
+            // At tuşuna basılı tutulduğunda veya nişan alındığında kesik çizgiyle atış ekseni
             if (this.isHuman && (this.charging || aimInput.mouseActive)) {
                 const hb = this.getHitbox();
                 const originX = 0;
@@ -1373,11 +1373,11 @@
                 const previewSpeed = this.getThrowSpeed();
 
                 ctx.save();
-                ctx.strokeStyle = isBlue ? 'rgba(56, 189, 248, 0.92)' : 'rgba(248, 113, 113, 0.92)';
+                ctx.strokeStyle = isBlue ? 'rgba(56, 189, 248, 0.96)' : 'rgba(248, 113, 113, 0.96)';
                 ctx.lineWidth = 3.5;
-                ctx.setLineDash([8, 8]);
+                ctx.setLineDash([9, 7]);
                 ctx.beginPath();
-                for (let t = 0; t <= 0.34; t += 0.045) {
+                for (let t = 0; t <= 0.48; t += 0.04) {
                     const px = originX + Math.cos(this.aimAngle) * previewSpeed * t;
                     const py = originY + Math.sin(this.aimAngle) * previewSpeed * t + 0.5 * (GRAVITY * 0.45) * t * t;
                     if (t === 0) ctx.moveTo(px, py);
@@ -1809,7 +1809,7 @@
             const rPos = getSpawnPositions(reds.length, 'red');
 
             blues.forEach((s, i) => {
-                state.players.push(new HeadBallCharacter({
+                state.players.push(new SnowFighterCharacter({
                     id: i + 1,
                     name: s.name,
                     team: 'blue',
@@ -1821,7 +1821,7 @@
                 }));
             });
             reds.forEach((s, i) => {
-                state.players.push(new HeadBallCharacter({
+                state.players.push(new SnowFighterCharacter({
                     id: 10 + i,
                     name: s.name,
                     team: 'red',
@@ -1833,23 +1833,23 @@
                 }));
             });
         } else if (!is2v2) {
-            state.players.push(new HeadBallCharacter({
-                id: 1, name: 'Mavi Kafa', team: 'blue', isHuman: true, controlScheme: 'p1', x: 300, avatarType: config.avatarType
+            state.players.push(new SnowFighterCharacter({
+                id: 1, name: 'Mavi Kışçı', team: 'blue', isHuman: true, controlScheme: 'p1', x: 300, avatarType: config.avatarType
             }));
-            state.players.push(new HeadBallCharacter({
+            state.players.push(new SnowFighterCharacter({
                 id: 2, name: 'Kızıl Bot', team: 'red', isHuman: false, controlScheme: 'ai', x: WORLD_W - 300, avatarType: 'goggles', aiDifficulty: config.difficulty
             }));
         } else {
-            state.players.push(new HeadBallCharacter({
+            state.players.push(new SnowFighterCharacter({
                 id: 1, name: '1. Oyuncu', team: 'blue', isHuman: true, controlScheme: 'p1', x: 210, avatarType: config.avatarType
             }));
-            state.players.push(new HeadBallCharacter({
+            state.players.push(new SnowFighterCharacter({
                 id: 2, name: 'Mavi Ortak', team: 'blue', isHuman: false, controlScheme: 'ai', x: 440, avatarType: 'icecrown', aiDifficulty: config.difficulty
             }));
-            state.players.push(new HeadBallCharacter({
+            state.players.push(new SnowFighterCharacter({
                 id: 3, name: 'Kızıl Kaptan', team: 'red', isHuman: false, controlScheme: 'ai', x: WORLD_W - 210, avatarType: 'goggles', aiDifficulty: config.difficulty
             }));
-            state.players.push(new HeadBallCharacter({
+            state.players.push(new SnowFighterCharacter({
                 id: 4, name: 'Kızıl Bot', team: 'red', isHuman: false, controlScheme: 'ai', x: WORLD_W - 440, avatarType: 'beanie', aiDifficulty: config.difficulty
             }));
         }
@@ -2381,29 +2381,45 @@
     bindTouchButton('t-duck', 'duck');
 
     const aimPad = document.getElementById('t-aim-pad');
-    const aimKnob = document.getElementById('t-aim-knob');
     let aimPadCenter = { x: 0, y: 0 };
     let draggingAimPad = false;
     let aimDragOffset = { x: 0, y: 0 };
 
-    function updateAimPadFromPoint(clientX, clientY) {
-        const maxPull = 34;
-        let dx = clientX - aimPadCenter.x;
-        let dy = clientY - aimPadCenter.y;
-        const len = Math.hypot(dx, dy);
-        if (len > maxPull) {
-            dx = (dx / len) * maxPull;
-            dy = (dy / len) * maxPull;
-        }
-        aimKnob.style.transform = `translate(${dx}px, ${dy}px)`;
-
-        const p1 = state.players.find(p => p.isHuman && p.controlScheme === 'p1' && p.isAlive);
+    function updateAimAxisFromPoint(clientX, clientY) {
+        const p1 = state.players.find(p => p.isHuman && p.isAlive);
         const isBlue = !p1 || p1.team === 'blue';
-        const rawAngle = len > 6 ? Math.atan2(dy, dx) : (isBlue ? -0.45 : -(Math.PI - 0.45));
-        aimInput.touchAimAngle = isBlue
-            ? clamp(rawAngle, -1.38, 0.42)
-            : clamp(rawAngle, -(Math.PI - 0.42), -1.76);
-        aimInput.touchAimPower = len > 6 ? clamp(len / maxPull, 0.2, 1) : 0.6;
+        const dx = clientX - aimPadCenter.x;
+        const dy = clientY - aimPadCenter.y;
+        const len = Math.hypot(dx, dy);
+
+        if (len > 10) {
+            const rawAngle = Math.atan2(dy, dx);
+            aimInput.touchAimAngle = isBlue
+                ? clamp(rawAngle, -1.38, 0.42)
+                : clamp(rawAngle, -(Math.PI - 0.42), -1.76);
+            aimInput.touchAimPower = clamp(len / 75, 0.25, 1);
+        } else {
+            aimInput.touchAimAngle = isBlue ? -0.52 : -(Math.PI - 0.52);
+            aimInput.touchAimPower = 0.72;
+        }
+    }
+
+    function beginFireHold(clientX, clientY) {
+        sfx.init();
+        const rect = aimPad.getBoundingClientRect();
+        aimPadCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+        touchState.fireHeld = true;
+        aimInput.touchAimActive = true;
+        aimPad.classList.add('pressed');
+        updateAimAxisFromPoint(clientX, clientY);
+    }
+
+    function releaseFireHold() {
+        if (!touchState.fireHeld && !aimInput.touchAimActive) return;
+        touchState.fireHeld = false;
+        aimInput.touchAimActive = false;
+        aimInput.touchReleasePending = true;
+        aimPad.classList.remove('pressed');
     }
 
     aimPad.addEventListener('touchstart', e => {
@@ -2419,11 +2435,7 @@
             aimPad.style.zIndex = '40';
             return;
         }
-        sfx.init();
-        const rect = aimPad.getBoundingClientRect();
-        aimPadCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
-        aimInput.touchAimActive = true;
-        updateAimPadFromPoint(t.clientX, t.clientY);
+        beginFireHold(t.clientX, t.clientY);
     }, { passive: false });
 
     aimPad.addEventListener('touchmove', e => {
@@ -2437,21 +2449,59 @@
             return;
         }
         if (!aimInput.touchAimActive || !e.changedTouches.length) return;
-        updateAimPadFromPoint(t.clientX, t.clientY);
+        updateAimAxisFromPoint(t.clientX, t.clientY);
     }, { passive: false });
 
-    function finishAimPad() {
+    aimPad.addEventListener('touchend', e => {
+        e.preventDefault();
         if (draggingAimPad) {
             draggingAimPad = false;
             return;
         }
-        if (!aimInput.touchAimActive) return;
-        aimInput.touchAimActive = false;
-        aimInput.touchReleasePending = true;
-        aimKnob.style.transform = 'translate(0px, 0px)';
-    }
-    aimPad.addEventListener('touchend', e => { e.preventDefault(); finishAimPad(); });
-    aimPad.addEventListener('touchcancel', e => { e.preventDefault(); finishAimPad(); });
+        releaseFireHold();
+    });
+    aimPad.addEventListener('touchcancel', e => {
+        e.preventDefault();
+        draggingAimPad = false;
+        releaseFireHold();
+    });
+
+    aimPad.addEventListener('mousedown', e => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        if (config.touchLayoutEditing) {
+            draggingAimPad = true;
+            const rect = aimPad.getBoundingClientRect();
+            aimDragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+            aimPad.style.position = 'fixed';
+            aimPad.style.right = 'auto';
+            aimPad.style.bottom = 'auto';
+            aimPad.style.zIndex = '40';
+            return;
+        }
+        beginFireHold(e.clientX, e.clientY);
+    });
+    window.addEventListener('mousemove', e => {
+        if (draggingAimPad) {
+            const maxX = Math.max(0, window.innerWidth - aimPad.offsetWidth);
+            const maxY = Math.max(0, window.innerHeight - aimPad.offsetHeight);
+            aimPad.style.left = `${clamp(e.clientX - aimDragOffset.x, 0, maxX)}px`;
+            aimPad.style.top = `${clamp(e.clientY - aimDragOffset.y, 0, maxY)}px`;
+            return;
+        }
+        if (aimInput.touchAimActive) {
+            updateAimAxisFromPoint(e.clientX, e.clientY);
+        }
+    });
+    window.addEventListener('mouseup', () => {
+        if (draggingAimPad) {
+            draggingAimPad = false;
+            return;
+        }
+        if (aimInput.touchAimActive) {
+            releaseFireHold();
+        }
+    });
 
     const touchToggle = document.getElementById('toggle-touch-ui');
     const touchControlsEl = document.getElementById('touch-controls');
@@ -2482,15 +2532,20 @@
             touchState.right = false;
             touchState.jump = false;
             touchState.duck = false;
+            touchState.fireHeld = false;
             aimInput.touchAimActive = false;
             aimInput.touchReleasePending = false;
             document.getElementById('main-menu').classList.add('hidden');
             document.getElementById('hud').classList.remove('hidden');
+            enterMobileMatchImmersion();
             touchControlsEl.classList.remove('hidden');
             touchControlsEl.style.display = 'block';
-        } else if (state.screen === 'menu') {
-            document.getElementById('hud').classList.add('hidden');
-            document.getElementById('main-menu').classList.remove('hidden');
+        } else {
+            if (state.screen === 'menu') {
+                exitMobileMatchImmersion();
+                document.getElementById('hud').classList.add('hidden');
+                document.getElementById('main-menu').classList.remove('hidden');
+            }
         }
         applyTouchEditVisuals();
         syncTouchVisibility();
