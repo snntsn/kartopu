@@ -2,7 +2,9 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>Kafa Topu: Kartopu Savaşı</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
@@ -11,24 +13,33 @@
             box-sizing: border-box;
             user-select: none;
             -webkit-user-select: none;
-            touch-action: none;
         }
         body, html {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
-            overflow: hidden;
+            height: 100dvh;
+            min-height: 100vh;
+            min-height: 100dvh;
+            overflow-x: hidden;
             font-family: 'Fredoka', 'Nunito', sans-serif;
-            background-color: #061021;
+            background: radial-gradient(circle at top, #1e3a8a 0%, #091833 65%, #050c1a 100%);
+            color: #0f172a;
+        }
+        body.match-active {
+            overflow: hidden;
+            height: 100dvh;
         }
         canvas {
             display: block;
             width: 100%;
             height: 100%;
+            height: 100dvh;
+            touch-action: none;
         }
         .arcade-panel {
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(224, 242, 254, 0.96) 100%);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(224, 242, 254, 0.97) 100%);
             border: 4px solid #38bdf8;
             box-shadow: 0 24px 60px rgba(2, 132, 199, 0.45), inset 0 3px 0 #ffffff;
         }
@@ -57,38 +68,42 @@
             box-shadow: 0 2px 0 #15803d;
         }
         .opt-btn {
-            border: 3px solid #cbd5e1;
+            border: 2.5px solid #cbd5e1;
             background: #ffffff;
             transition: all 0.14s ease;
+            color: #0f172a;
+        }
+        .opt-btn:hover {
+            border-color: #7dd3fc;
+            transform: translateY(-1px);
         }
         .opt-btn.active {
             border-color: #0284c7;
             background: #e0f2fe;
-            transform: scale(1.02);
             box-shadow: 0 4px 12px rgba(2, 132, 199, 0.22);
         }
         .touch-pad-btn {
-            background: rgba(15, 23, 42, 0.42);
-            border: 2.5px solid rgba(255, 255, 255, 0.72);
+            background: rgba(15, 23, 42, 0.52);
+            border: 2.5px solid rgba(255, 255, 255, 0.78);
             backdrop-filter: blur(4px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
             touch-action: none;
-        }
-        .touch-pad-btn:active, .touch-pad-btn.pressed {
-            background: rgba(56, 189, 248, 0.85);
-            border-color: #ffffff;
-            transform: scale(0.94);
         }
         .touch-pad-btn:active, .touch-pad-btn.pressed {
             background: rgba(56, 189, 248, 0.88);
             border-color: #ffffff;
             transform: scale(0.93);
         }
+        .touch-pad-btn.edit-mode-active {
+            outline: 3px dashed #fbbf24;
+            outline-offset: 2px;
+            cursor: grab;
+        }
         #portrait-warning {
             display: none;
         }
         @media screen and (orientation: portrait) and (max-width: 768px) {
-            #portrait-warning {
+            body.match-active #portrait-warning {
                 display: flex;
             }
         }
@@ -96,15 +111,15 @@
 </head>
 <body class="relative w-full h-full overflow-hidden">
 
-    <!-- Dikey Ekran Uyarısı (Küçük Mobil Ekranlar) -->
+    <!-- Dikey Ekran Uyarısı (Sadece Maç Sırasında Dikey Kalınırsa) -->
     <div id="portrait-warning" class="fixed inset-0 z-50 bg-slate-950/95 text-white flex-col items-center justify-center p-6 text-center">
         <div class="text-6xl mb-4 animate-bounce">📱🔄</div>
         <h2 class="text-2xl font-bold text-sky-300 mb-2">Ekranı Yatay Çevirin</h2>
-        <p class="text-slate-300 text-sm">Kafa Topu: Kartopu Savaşı geniş yatay sahada en keyifli şekilde oynanır!</p>
+        <p class="text-slate-300 text-sm mb-4">Kafa Topu: Kartopu Savaşı geniş yatay sahada en keyifli şekilde oynanır!</p>
+        <button id="btn-retry-landscape" type="button" class="px-5 py-2.5 rounded-2xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-sm shadow cursor-pointer">
+            🔄 Yatay Tam Ekran Dene
+        </button>
     </div>
-
-    <!-- Ana Oyun Sahnesi -->
-    <canvas id="gameCanvas"></canvas>
 
     <!-- ÜST BİLGİ ÇUBUĞU (HUD) -->
     <div id="hud" class="hidden fixed top-0 left-0 right-0 z-20 pointer-events-none px-2 sm:px-6 pt-1.5 sm:pt-2.5 flex items-start justify-between gap-1.5">
@@ -205,123 +220,144 @@
     </div>
 
     <!-- ANA MENÜ -->
-    <div id="main-menu" class="fixed inset-0 z-30 flex items-center justify-center p-3 sm:p-5 bg-slate-950/65 backdrop-blur-sm overflow-y-auto">
-        <div class="arcade-panel rounded-3xl max-w-4xl w-full p-5 sm:p-7 text-slate-800 relative my-auto">
+    <div id="main-menu" class="fixed inset-0 z-30 flex items-start sm:items-center justify-center p-3 sm:p-5 bg-slate-950/65 backdrop-blur-sm overflow-y-auto">
+        <div class="arcade-panel rounded-3xl max-w-4xl w-full p-4 sm:p-7 text-slate-800 relative my-auto">
             <div class="text-center mb-4">
                 <div class="inline-flex items-center gap-2 bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider border-2 border-amber-300 mb-1.5">
-                    ⚽ GENİŞ YATAY ARENA • SERBEST AÇI &amp; HIZ NİŞAN • KAFA TOPU ❄️
+                    ❄️ KARTOPU DÜELLOSU • GENİŞ YATAY ARENA ❄️
                 </div>
                 <h1 class="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-700 via-sky-500 to-red-600 tracking-tight">
                     KAFA TOPU: KARTOPU SAVAŞI
                 </h1>
                 <p class="text-slate-600 font-bold text-xs sm:text-sm mt-1">
-                    İstediğin açı ve hızda kartopu at, orta buz engelinin arkasındaki rakibi kavis veya sert atışla avla!
+                    Avatarını seç, 1. oyuncu modunu belirle; çevrimiçi odada istediğin slotlara bot ekleyip çıkarabilirsin.
                 </p>
             </div>
 
-            <!-- Mod ve Zorluk Seçimi -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-                <div class="bg-white/85 rounded-2xl p-3 border-2 border-sky-200">
-                    <h3 class="text-xs font-black text-sky-700 uppercase tracking-wider mb-2">⚔️ 1. Maç Formatı</h3>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button type="button" data-format="1v1" class="format-btn opt-btn active rounded-xl p-2 text-center cursor-pointer">
-                            <div class="text-lg font-black text-blue-600">1 vs 1</div>
-                            <div class="text-[11px] font-bold text-slate-500">Birebir Düello</div>
-                        </button>
-                        <button type="button" data-format="2v2" class="format-btn opt-btn rounded-xl p-2 text-center cursor-pointer">
-                            <div class="text-lg font-black text-red-600">2 vs 2</div>
-                            <div class="text-[11px] font-bold text-slate-500">Geniş Takım Savaşı</div>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="bg-white/85 rounded-2xl p-3 border-2 border-sky-200">
-                    <h3 class="text-xs font-black text-sky-700 uppercase tracking-wider mb-2">🎮 2. Oyuncu Modu</h3>
-                    <div class="grid grid-cols-3 gap-1.5">
-                        <button type="button" data-players="1p" class="players-btn opt-btn active rounded-xl py-2 px-1 text-center cursor-pointer">
-                            <div class="text-xs font-black text-slate-800">Tek Kişi</div>
-                            <div class="text-[10px] font-bold text-slate-500">Botlara Karşı</div>
-                        </button>
-                        <button type="button" data-players="2p" class="players-btn opt-btn rounded-xl py-2 px-1 text-center cursor-pointer">
-                            <div class="text-xs font-black text-slate-800">2 Oyuncu</div>
-                            <div class="text-[10px] font-bold text-slate-500">Aynı Klavye</div>
-                        </button>
-                        <button type="button" data-players="online" class="players-btn opt-btn rounded-xl py-2 px-1 text-center cursor-pointer">
-                            <div class="text-xs font-black text-sky-700">Çevrimiçi</div>
-                            <div class="text-[10px] font-bold text-slate-500">Lobi / Oda</div>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="bg-white/85 rounded-2xl p-3 border-2 border-sky-200">
-                    <h3 class="text-xs font-black text-sky-700 uppercase tracking-wider mb-2">🤖 3. Bot Seviyesi</h3>
-                    <div class="grid grid-cols-3 gap-1.5">
-                        <button type="button" data-diff="easy" class="diff-btn opt-btn rounded-xl py-2 px-1 text-center cursor-pointer">
-                            <div class="text-xs font-black text-emerald-600">Kolay</div>
-                            <div class="text-[10px] font-bold text-slate-400">Acemi</div>
-                        </button>
-                        <button type="button" data-diff="medium" class="diff-btn opt-btn active rounded-xl py-2 px-1 text-center cursor-pointer">
-                            <div class="text-xs font-black text-amber-600">Orta</div>
-                            <div class="text-[10px] font-bold text-slate-400">Dengeli</div>
-                        </button>
-                        <button type="button" data-diff="hard" class="diff-btn opt-btn rounded-xl py-2 px-1 text-center cursor-pointer">
-                            <div class="text-xs font-black text-rose-600">Zor</div>
-                            <div class="text-[10px] font-bold text-slate-400">Efsane</div>
-                        </button>
-                    </div>
+            <!-- 1. AVATAR TİPİ -->
+            <div class="bg-white/90 rounded-2xl p-3 border-2 border-sky-200 mb-3">
+                <h3 class="text-xs font-black text-sky-700 uppercase tracking-wider mb-2">🎭 1. AVATAR TİPİNİ SEÇ</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <button type="button" data-avatar="beanie" class="avatar-btn opt-btn active rounded-xl p-2.5 flex items-center justify-center gap-2.5 cursor-pointer">
+                        <span class="text-2xl">🧢</span>
+                        <div class="text-left">
+                            <div class="text-xs sm:text-sm font-black">Bere &amp; Atkı</div>
+                            <div class="text-[11px] font-bold text-slate-500">Klasik Kışçı</div>
+                        </div>
+                    </button>
+                    <button type="button" data-avatar="goggles" class="avatar-btn opt-btn rounded-xl p-2.5 flex items-center justify-center gap-2.5 cursor-pointer">
+                        <span class="text-2xl">🥽</span>
+                        <div class="text-left">
+                            <div class="text-xs sm:text-sm font-black">Kar Gözlüklü</div>
+                            <div class="text-[11px] font-bold text-slate-500">Kuzey Avcısı</div>
+                        </div>
+                    </button>
+                    <button type="button" data-avatar="icecrown" class="avatar-btn opt-btn rounded-xl p-2.5 flex items-center justify-center gap-2.5 cursor-pointer">
+                        <span class="text-2xl">🧊</span>
+                        <div class="text-left">
+                            <div class="text-xs sm:text-sm font-black">Buz Başlıklı</div>
+                            <div class="text-[11px] font-bold text-slate-500">Donmuş Ruh</div>
+                        </div>
+                    </button>
                 </div>
             </div>
 
-            <!-- Çevrimiçi Lobi Kutusu -->
-            <div id="online-lobby-box" class="hidden bg-sky-100/90 border-2 border-sky-300 rounded-2xl p-3.5 mb-4">
+            <!-- 2. 1. OYUNCU MODU -->
+            <div class="bg-sky-50/90 rounded-2xl p-3 border-2 border-sky-300 mb-3">
+                <h3 class="text-xs font-black text-sky-800 uppercase tracking-wider mb-2">🎮 2. 1. OYUNCU MODU</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <button type="button" data-players="1p" class="mode-btn opt-btn rounded-xl p-2.5 flex items-center justify-center gap-2.5 cursor-pointer">
+                        <span class="text-2xl">🧑</span>
+                        <div class="text-left">
+                            <div class="text-sm font-black text-slate-900">Tek Kişi</div>
+                            <div class="text-xs font-bold text-slate-500">Botlara karşı tek başına oyna</div>
+                        </div>
+                    </button>
+                    <button type="button" data-players="online" class="mode-btn opt-btn rounded-xl p-2.5 flex items-center justify-center gap-2.5 cursor-pointer">
+                        <span class="text-2xl">🌐</span>
+                        <div class="text-left">
+                            <div class="text-sm font-black text-sky-700">Çevrim İçi</div>
+                            <div class="text-xs font-bold text-slate-500">Yeni oda kur veya odaya katıl</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. FORMAT SEÇİMİ (TEK KİŞİ MODU İÇİN) -->
+            <div id="format-step" class="hidden bg-white/90 rounded-2xl p-3 border-2 border-sky-200 mb-3">
+                <h3 class="text-xs font-black text-sky-700 uppercase tracking-wider mb-2">⚔️ 3. MAÇ FORMATI SEÇ</h3>
+                <div class="grid grid-cols-2 gap-2.5">
+                    <button type="button" data-format="1v1" class="format-btn opt-btn rounded-xl p-2.5 text-center cursor-pointer">
+                        <div class="text-base sm:text-lg font-black text-blue-600">1 vs 1</div>
+                        <div class="text-xs font-bold text-slate-500">Birebir düello</div>
+                    </button>
+                    <button type="button" data-format="2v2" class="format-btn opt-btn rounded-xl p-2.5 text-center cursor-pointer">
+                        <div class="text-base sm:text-lg font-black text-red-600">2 vs 2</div>
+                        <div class="text-xs font-bold text-slate-500">İkişer kişilik takımlar</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 4. ÇEVRİMİÇİ ODA / LOBİ -->
+            <div id="online-lobby-box" class="hidden bg-sky-100/95 border-2 border-sky-300 rounded-2xl p-3.5 mb-3">
                 <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
                     <div class="flex flex-wrap items-center gap-2">
-                        <input id="player-nick" type="text" maxlength="14" value="KışKafası" placeholder="Takma Ad" class="px-3 py-1.5 rounded-xl border-2 border-sky-300 bg-white text-xs sm:text-sm font-bold text-slate-800 w-32 sm:w-36 focus:outline-none focus:border-sky-600">
+                        <input id="player-nick" type="text" maxlength="14" value="KışOyuncusu" placeholder="Takma Ad" class="px-3 py-1.5 rounded-xl border-2 border-sky-300 bg-white text-xs sm:text-sm font-bold text-slate-800 w-32 sm:w-36 focus:outline-none focus:border-sky-600">
                         <span class="text-xs font-black text-sky-800 bg-white px-2.5 py-1.5 rounded-xl border border-sky-300">
-                            ODA: <span id="lobby-room-code" class="font-mono text-blue-700">KAR42</span>
+                            ODA: <span id="lobby-room-code" class="font-mono text-blue-700">—</span>
                         </span>
-                        <input id="join-room-input" type="text" maxlength="5" placeholder="Kod Gir" class="px-2.5 py-1.5 rounded-xl border-2 border-sky-300 bg-white text-xs font-mono font-bold text-slate-800 w-24 uppercase focus:outline-none focus:border-sky-600">
-                        <button id="btn-join-room" type="button" class="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black cursor-pointer">Katıl</button>
+                        <input id="join-room-input" type="text" maxlength="5" placeholder="Kod" class="px-2.5 py-1.5 rounded-xl border-2 border-sky-300 bg-white text-xs font-mono font-bold text-slate-800 w-20 uppercase focus:outline-none focus:border-sky-600">
+                        <button id="btn-join-room" type="button" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black cursor-pointer">Katıl</button>
                     </div>
                     <div class="flex items-center gap-1.5">
+                        <div id="room-fmt-selector" class="inline-flex items-center rounded-xl bg-white p-0.5 border-2 border-sky-300">
+                            <button id="btn-room-fmt-1v1" type="button" data-room-format="1v1" class="room-fmt-btn px-2 py-1 rounded-lg bg-sky-600 text-white text-[11px] font-black cursor-pointer">1v1</button>
+                            <button id="btn-room-fmt-2v2" type="button" data-room-format="2v2" class="room-fmt-btn px-2 py-1 rounded-lg text-sky-900 hover:bg-sky-100 text-[11px] font-black cursor-pointer">2v2</button>
+                        </div>
+                        <span id="active-room-fmt-badge" class="hidden px-2.5 py-1 rounded-xl bg-blue-900 text-white text-[11px] font-black tracking-wide"></span>
                         <button id="btn-create-room" type="button" class="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-black cursor-pointer">Yeni Oda</button>
+                        <button id="btn-leave-room" type="button" class="hidden px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">Odadan Çık</button>
                         <button id="btn-quick-match" type="button" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black cursor-pointer">Hızlı Eşleşme</button>
-                        <button id="btn-fill-bots" type="button" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black cursor-pointer">Bot Doldur</button>
                     </div>
                 </div>
                 <div id="lobby-roster" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs"></div>
-                <div id="lobby-status-msg" class="text-[11px] font-bold text-sky-800 mt-2">Oda oluşturabilir, kodla katılabilir veya takım/hazır ayarlarını değiştirebilirsiniz.</div>
+                <div id="lobby-status-msg" class="text-[11px] font-bold text-sky-800 mt-2">Yeni Oda'nın yanından 1v1 veya 2v2 seçip Yeni Oda'ya basın veya oda kodu ile katılın.</div>
             </div>
 
             <!-- Kontroller ve Süper Güçler -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 text-xs">
                 <div class="bg-sky-50 rounded-2xl p-3 border-2 border-sky-200">
-                    <div class="font-black text-sky-900 mb-1.5 flex items-center justify-between">
+                    <div class="font-black text-sky-900 mb-1.5 flex items-center justify-between flex-wrap gap-1.5">
                         <span>🎯 Serbest Açı, Hız &amp; Hareket</span>
-                        <label class="inline-flex items-center gap-1.5 cursor-pointer text-[11px] font-bold text-sky-700 bg-white px-2 py-0.5 rounded-lg border border-sky-200">
-                            <input type="checkbox" id="toggle-touch-ui" class="accent-sky-600">
-                            <span>Dokunmatik Tuşlar</span>
-                        </label>
+                        <div class="flex items-center gap-1.5">
+                            <label class="inline-flex items-center gap-1.5 cursor-pointer text-[11px] font-bold text-sky-700 bg-white px-2 py-0.5 rounded-lg border border-sky-200">
+                                <input type="checkbox" id="toggle-touch-ui" class="accent-sky-600">
+                                <span>Dokunmatik Tuşlar</span>
+                            </label>
+                            <button id="btn-open-pad-editor" type="button" class="text-[11px] font-black text-amber-800 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded-lg border border-amber-300 cursor-pointer">
+                                Tuş Düzeni
+                            </button>
+                        </div>
                     </div>
                     <div class="space-y-1 text-slate-700 font-semibold">
-                        <div><span class="text-blue-600 font-black">1. Oyuncu:</span> <kbd class="px-1.5 py-0.5 bg-white border rounded font-mono">A/D</kbd> Koş, <kbd class="px-1.5 py-0.5 bg-white border rounded font-mono">W</kbd> Zıpla, <kbd class="px-1.5 py-0.5 bg-white border rounded font-mono">S</kbd> Eğil • <b>Fare</b> ile açı/hız nişanla &amp; tıkla veya <kbd class="px-1.5 py-0.5 bg-white border rounded font-mono">Space</kbd> basılı tutup <kbd class="px-1.5 py-0.5 bg-white border rounded font-mono">▲/▼</kbd> açı ayarla</div>
-                        <div><span class="text-red-600 font-black">2. Oyuncu:</span> <kbd class="px-1.5 py-0.5 bg-white border rounded font-mono">◀/▶</kbd> Koş, <kbd class="px-1.5 py-0.5 bg-white border rounded font-mono">▲</kbd> Zıpla, <kbd class="px-1.5 py-0.5 bg-white border rounded font-mono">▼</kbd> Eğil, <kbd class="px-1.5 py-0.5 bg-white border rounded font-mono">Enter/M</kbd> At</div>
-                        <div><span class="text-emerald-700 font-black">Mobil:</span> Sağ alttaki <b>Sürükle/At</b> pedini veya sahayı çekerek yön (açı) ve mesafe (hız) belirleyip bırak!</div>
+                        <div><kbd class="px-1.5 py-0.5 bg-white border rounded font-mono">A/D</kbd> Koş • <kbd class="px-1.5 py-0.5 bg-white border rounded font-mono">W</kbd> Zıpla • <kbd class="px-1.5 py-0.5 bg-white border rounded font-mono">S</kbd> Eğil</div>
+                        <div><b>Fare</b> ile açı/hız nişanla &amp; tıkla veya <kbd class="px-1.5 py-0.5 bg-white border rounded font-mono">Space</kbd> basılı tutup bırak.</div>
                     </div>
                 </div>
 
                 <div class="bg-amber-50 rounded-2xl p-3 border-2 border-amber-200">
-                    <div class="font-black text-amber-900 mb-1.5">🧊 Havadaki Gizem Kutularını Vur!</div>
-                    <div class="grid grid-cols-2 gap-1.5 text-slate-700 font-semibold">
-                        <div>☄️ <b>Dev Kartopu:</b> Ağır darbe &amp; itme</div>
-                        <div>🥶 <b>Buz Dondurucu:</b> 2 sn dondurur</div>
-                        <div>🔥 <b>Seri Atış:</b> Hızlı kartopu yağmuru</div>
-                        <div>🛡️ <b>Süper Zıplama:</b> Kalkan + Yüksek zıplama</div>
+                    <div class="font-black text-amber-900 mb-1">🧊 Havadaki Gizem Kutularını Vur!</div>
+                    <div class="grid grid-cols-2 gap-1 text-slate-700 font-semibold">
+                        <div>☄️ <b>Dev Kartopu</b></div>
+                        <div>🥶 <b>Buz Dondurucu</b></div>
+                        <div>🔥 <b>Seri Atış</b></div>
+                        <div>🛡️ <b>Kalkan + Zıplama</b></div>
                     </div>
                 </div>
             </div>
 
-            <div class="flex justify-center">
+            <div class="flex flex-col items-center gap-2">
+                <div id="menu-hint-msg" class="text-xs font-extrabold text-sky-800"></div>
                 <button id="btn-start" type="button" class="btn-arcade bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black text-xl px-12 py-3.5 rounded-2xl tracking-wide cursor-pointer">
                     ❄️ MAÇI BAŞLAT (3 TUR)
                 </button>
@@ -349,16 +385,9 @@
         </div>
     </div>
 
-    <script>
-    /**
-     * KAFA TOPU: KARTOPU SAVAŞI
-     * Geniş yatay kış sahasında 1v1 ve 2v2 kafa topu kartopu savaşı.
-     * Serbest açı ve hız nişanlama (Fare, Klavye ve Mobil Sürükle-Bırak) destekli.
-     */
+    <canvas id="gameCanvas"></canvas>
 
-    // ==========================================
-    // 1. WEB AUDIO SES SENTEZLEYİCİ
-    // ==========================================
+    <script>
     class SoundEffects {
         constructor() {
             this.ctx = null;
@@ -511,9 +540,6 @@
     }
     const sfx = new SoundEffects();
 
-    // ==========================================
-    // 2. GENİŞ YATAY ARENA SABİTLERİ & NİŞAN DURUMU
-    // ==========================================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
 
@@ -532,14 +558,56 @@
     let scaleY = 1;
     let viewOffsetY = 0;
 
+    const rand = (min, max) => Math.random() * (max - min) + min;
+    const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
+    const dist = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1);
+
     function nudgeAddressBarHide() {
+        try {
+            window.scrollTo(0, 1);
+            setTimeout(() => {
+                try { window.scrollTo(0, 0); } catch (_) {}
+            }, 120);
+        } catch (_) {}
+    }
+
+    async function enterMobileMatchImmersion() {
+        document.body.classList.add('match-active');
+        nudgeAddressBarHide();
+        try {
+            const root = document.documentElement;
+            if (!document.fullscreenElement && root.requestFullscreen) {
+                await root.requestFullscreen({ navigationUI: 'hide' }).catch(() => root.requestFullscreen().catch(() => {}));
+            }
+        } catch (_) {}
+        try {
+            if (screen.orientation && typeof screen.orientation.lock === 'function') {
+                await screen.orientation.lock('landscape').catch(() => {});
+            }
+        } catch (_) {}
+        resizeCanvas();
+    }
+
+    function exitMobileMatchImmersion() {
+        document.body.classList.remove('match-active');
+        try {
+            if (screen.orientation && typeof screen.orientation.unlock === 'function') {
+                screen.orientation.unlock();
+            }
+        } catch (_) {}
+        try {
+            if (document.fullscreenElement && document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {});
+            }
+        } catch (_) {}
+        resizeCanvas();
+    }
+
     function resizeCanvas() {
         const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
         const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
         canvas.width = Math.max(1, Math.round(vw));
         canvas.height = Math.max(1, Math.round(vh));
-        // Yatay mobil gibi dar dikey yüksekliklerde zeminin ve karakterlerin kırpılmaması için
-        // ölçeği yatay genişliğe göre kurup görünür alt sınıra hizalı kaydırma uygularız.
         scaleX = canvas.width / WORLD_W;
         const minFitScaleY = canvas.height / WORLD_H;
         const isLandscapePhone = canvas.width > canvas.height && canvas.height < 520;
@@ -554,25 +622,29 @@
         }
     }
     window.addEventListener('resize', resizeCanvas);
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', resizeCanvas);
+    }
+    document.addEventListener('fullscreenchange', resizeCanvas);
     resizeCanvas();
 
-    const rand = (min, max) => Math.random() * (max - min) + min;
-    const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
-    const dist = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1);
-
     const config = {
-        format: '1v1',
-        playersMode: '1p',
+        format: null,
+        playersMode: null,
         difficulty: 'medium',
-        roundsToWin: 3
+        roundsToWin: 3,
+        avatarType: 'beanie',
+        touchLayoutEditing: false,
+        bots: { blue: 0, red: 1 },
+        botDifficulties: ['medium']
     };
 
     const lobbyState = {
         roomCode: 'KAR42',
-        slots: []
+        slots: [],
+        roomCreated: false
     };
 
-    // Serbest açı & hız nişan durumu (Fare + Mobil Sürükle/At)
     const aimInput = {
         mouseWorldX: MOUND_X + 250,
         mouseWorldY: GROUND_Y - 160,
@@ -615,16 +687,15 @@
     const keys = {};
     const touchState = { left: false, right: false, jump: false, duck: false };
 
-    // ==========================================
-    // 3. KAFA TOPU KARAKTERİ (SERBEST AÇI & HIZ)
-    // ==========================================
     class HeadBallCharacter {
-        constructor({ id, name, team, isHuman, controlScheme, x }) {
+        constructor({ id, name, team, isHuman, controlScheme, x, avatarType = 'beanie', aiDifficulty = 'medium' }) {
             this.id = id;
             this.name = name;
             this.team = team;
             this.isHuman = isHuman;
             this.controlScheme = controlScheme;
+            this.avatarType = avatarType;
+            this.aiDifficulty = aiDifficulty;
 
             this.x = x;
             this.y = GROUND_Y;
@@ -699,17 +770,9 @@
 
         getHitbox() {
             if (this.isDucking) {
-                return {
-                    x: this.x,
-                    y: this.y - 23,
-                    r: this.headRadius * 0.86
-                };
+                return { x: this.x, y: this.y - 23, r: this.headRadius * 0.86 };
             }
-            return {
-                x: this.x,
-                y: this.y - (this.footHeight + this.headRadius),
-                r: this.headRadius
-            };
+            return { x: this.x, y: this.y - (this.footHeight + this.headRadius), r: this.headRadius };
         }
 
         getThrowSpeed() {
@@ -766,67 +829,41 @@
             let keyThrowHeld = false;
 
             if (this.isHuman) {
-                if (this.controlScheme === 'p1') {
-                    if (keys['KeyA'] || touchState.left) moveDir -= 1;
-                    if (keys['KeyD'] || touchState.right) moveDir += 1;
-                    wantJump = !!keys['KeyW'] || !!touchState.jump;
-                    wantDuck = !!keys['KeyS'] || !!touchState.duck;
-                    keyThrowHeld = !!keys['Space'];
+                if (keys['KeyA'] || touchState.left) moveDir -= 1;
+                if (keys['KeyD'] || touchState.right) moveDir += 1;
+                wantJump = !!keys['KeyW'] || !!touchState.jump;
+                wantDuck = !!keys['KeyS'] || !!touchState.duck;
+                keyThrowHeld = !!keys['Space'];
 
-                    if (aimInput.touchAimActive) {
-                        this.aimAngle = aimInput.touchAimAngle;
-                        this.charge = aimInput.touchAimPower;
+                if (aimInput.touchAimActive) {
+                    this.aimAngle = aimInput.touchAimAngle;
+                    this.charge = aimInput.touchAimPower;
+                    this.charging = true;
+                } else if (aimInput.mouseActive) {
+                    const hb = this.getHitbox();
+                    const dx = aimInput.mouseWorldX - hb.x;
+                    const dy = aimInput.mouseWorldY - hb.y;
+                    const rawAngle = Math.atan2(dy, dx);
+                    if (this.team === 'blue') {
+                        this.aimAngle = clamp(rawAngle, -1.38, 0.42);
+                    } else {
+                        let norm = rawAngle;
+                        if (norm > 0) norm -= Math.PI * 2;
+                        this.aimAngle = clamp(norm, -(Math.PI - 0.42), -1.76);
+                    }
+                    const pullDist = clamp(Math.hypot(dx, dy), 55, 560);
+                    this.charge = (pullDist - 55) / (560 - 55);
+                    if (aimInput.mouseCharging) {
                         this.charging = true;
-                    } else if (aimInput.mouseActive) {
-                        const hb = this.getHitbox();
-                        const dx = aimInput.mouseWorldX - hb.x;
-                        const dy = aimInput.mouseWorldY - hb.y;
-                        const rawAngle = Math.atan2(dy, dx);
-                        if (this.team === 'blue') {
-                            this.aimAngle = clamp(rawAngle, -1.38, 0.42);
-                        } else {
-                            let norm = rawAngle;
-                            if (norm > 0) norm -= Math.PI * 2;
-                            this.aimAngle = clamp(norm, -(Math.PI - 0.42), -1.76);
-                        }
-                        const pullDist = clamp(Math.hypot(dx, dy), 55, 560);
-                        this.charge = (pullDist - 55) / (560 - 55);
-                        if (aimInput.mouseCharging) {
-                            this.charging = true;
-                        }
                     }
+                }
 
-                    if (keyThrowHeld) {
-                        if (keys['ArrowUp']) {
-                            this.aimAngle += (this.team === 'blue' ? -1 : 1) * dt * 1.45;
-                        }
-                        if (keys['ArrowDown']) {
-                            this.aimAngle += (this.team === 'blue' ? 1 : -1) * dt * 1.45;
-                        }
-                        if (keys['ArrowRight']) {
-                            this.charge = clamp(this.charge + dt * 0.95, 0, 1);
-                        } else if (keys['ArrowLeft']) {
-                            this.charge = clamp(this.charge - dt * 0.95, 0, 1);
-                        } else {
-                            this.charge = clamp(this.charge + dt * 0.85, 0.15, 1);
-                        }
-
-                        if (this.team === 'blue') {
-                            this.aimAngle = clamp(this.aimAngle, -1.38, 0.42);
-                        } else {
-                            this.aimAngle = clamp(this.aimAngle, -(Math.PI - 0.42), -1.76);
-                        }
-                    }
-                } else if (this.controlScheme === 'p2') {
-                    if (keys['ArrowLeft']) moveDir -= 1;
-                    if (keys['ArrowRight']) moveDir += 1;
-                    wantJump = !!keys['ArrowUp'];
-                    wantDuck = !!keys['ArrowDown'];
-                    keyThrowHeld = !!(keys['Enter'] || keys['KeyM']);
-                    if (keyThrowHeld) {
-                        this.charge = clamp(this.charge + dt * 0.95, 0.2, 1);
-                        this.aimAngle = -(Math.PI - (0.18 + this.charge * 0.62));
-                    }
+                if (keyThrowHeld) {
+                    if (keys['ArrowUp']) this.aimAngle += (this.team === 'blue' ? -1 : 1) * dt * 1.45;
+                    if (keys['ArrowDown']) this.aimAngle += (this.team === 'blue' ? 1 : -1) * dt * 1.45;
+                    if (keys['ArrowRight']) this.charge = clamp(this.charge + dt * 0.95, 0, 1);
+                    else if (keys['ArrowLeft']) this.charge = clamp(this.charge - dt * 0.95, 0, 1);
+                    else this.charge = clamp(this.charge + dt * 0.85, 0.15, 1);
                 }
             } else {
                 const aiCmd = this.thinkAI(dt);
@@ -839,9 +876,7 @@
             }
 
             const nextDuck = wantDuck && this.grounded;
-            if (nextDuck && !this.duckPressedLast) {
-                sfx.playDuck();
-            }
+            if (nextDuck && !this.duckPressedLast) sfx.playDuck();
             this.duckPressedLast = nextDuck;
             this.isDucking = nextDuck;
 
@@ -893,8 +928,7 @@
                 this.jumpsLeft = 2;
             }
 
-            // Atış tetikleme kuralları
-            if (this.isHuman && this.controlScheme === 'p1') {
+            if (this.isHuman) {
                 if (this.rapidTimer > 0 && (keyThrowHeld || aimInput.mouseCharging || aimInput.touchAimActive)) {
                     if (this.cooldown <= 0) {
                         this.fireSnowball();
@@ -931,11 +965,12 @@
         }
 
         thinkAI(dt) {
+            const diffKey = this.aiDifficulty || config.difficulty || 'medium';
             const diffCfg = {
                 easy:   { react: 0.55, dodgeDist: 175, accuracy: 0.22 },
                 medium: { react: 0.30, dodgeDist: 250, accuracy: 0.10 },
                 hard:   { react: 0.14, dodgeDist: 330, accuracy: 0.03 }
-            }[config.difficulty];
+            }[diffKey] || { react: 0.30, dodgeDist: 250, accuracy: 0.10 };
 
             let wantJump = false;
             let wantDuck = false;
@@ -950,11 +985,8 @@
                 const dx = Math.abs(this.x - sb.x);
                 if (dx < diffCfg.dodgeDist) {
                     const heightFromGround = GROUND_Y - sb.y;
-                    if (heightFromGround < 58 && this.grounded) {
-                        wantJump = true;
-                    } else if (heightFromGround >= 58 && heightFromGround < 115 && this.grounded) {
-                        wantDuck = true;
-                    }
+                    if (heightFromGround < 58 && this.grounded) wantJump = true;
+                    else if (heightFromGround >= 58 && heightFromGround < 115 && this.grounded) wantDuck = true;
                 }
             }
 
@@ -976,9 +1008,7 @@
             if (this.x < this.ai.targetX - 18) moveDir = 1;
             else if (this.x > this.ai.targetX + 18) moveDir = -1;
 
-            if (this.cooldown <= 0 && !wantDuck) {
-                wantThrow = !this.charging;
-            }
+            if (this.cooldown <= 0 && !wantDuck) wantThrow = !this.charging;
 
             return {
                 moveDir,
@@ -1003,14 +1033,11 @@
             const radius = isMega ? 24 : (10 + this.charge * 4);
             const damage = isMega ? 38 : Math.round(14 + this.charge * 16);
 
-            const spawnX = hb.x + Math.cos(angle) * (hb.r + 12);
-            const spawnY = hb.y + Math.sin(angle) * (hb.r + 12);
-
             state.snowballs.push({
                 owner: this,
                 team: this.team,
-                x: spawnX,
-                y: spawnY,
+                x: hb.x + Math.cos(angle) * (hb.r + 12),
+                y: hb.y + Math.sin(angle) * (hb.r + 12),
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed,
                 radius,
@@ -1122,8 +1149,6 @@
             ctx.roundRect(-16, -8, 35, 16, [8, 14, 6, 6]);
             ctx.fill();
             ctx.stroke();
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(-14, 4, 31, 4);
             ctx.restore();
 
             ctx.save();
@@ -1131,16 +1156,26 @@
             const headCenterY = -(this.footHeight + this.headRadius);
             ctx.translate(0, headCenterY);
 
-            const scarfWave = Math.sin(performance.now() * 0.012 + this.id) * 7;
-            ctx.fillStyle = isBlue ? '#38bdf8' : '#fbbf24';
+            const animT = performance.now() * 0.008 + this.id * 1.3;
+            const scarfWave = Math.sin(animT * 1.4) * 8 + (this.grounded ? Math.sin(this.walkPhase) * 4 : -5);
+            const scarfColor = isBlue ? '#38bdf8' : '#fbbf24';
+            const scarfTrim = isBlue ? '#1d4ed8' : '#ea580c';
+
+            ctx.fillStyle = scarfColor;
             ctx.strokeStyle = '#0f172a';
-            ctx.lineWidth = 2.2;
+            ctx.lineWidth = 2.5;
             ctx.beginPath();
-            ctx.moveTo(-dir * 22, 22);
-            ctx.lineTo(-dir * 54, 15 + scarfWave);
-            ctx.lineTo(-dir * 50, 33 + scarfWave);
-            ctx.lineTo(-dir * 18, 31);
+            ctx.moveTo(-dir * 20, 22);
+            ctx.quadraticCurveTo(-dir * 38, 16 + scarfWave * 0.6, -dir * 56, 20 + scarfWave);
+            ctx.lineTo(-dir * 52, 34 + scarfWave);
+            ctx.quadraticCurveTo(-dir * 35, 30 + scarfWave * 0.5, -dir * 18, 31);
             ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(-dir * 57, 27 + scarfWave, 4.5, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
 
@@ -1155,38 +1190,39 @@
             ctx.fill();
             ctx.stroke();
 
-            ctx.fillStyle = 'rgba(244, 63, 94, 0.36)';
+            ctx.fillStyle = this.hurtTimer > 0 ? 'rgba(239, 68, 68, 0.45)' : 'rgba(251, 113, 133, 0.46)';
             ctx.beginPath();
-            ctx.ellipse(dir * 15, 8, 7.5, 4.8, 0, 0, Math.PI * 2);
+            ctx.ellipse(dir * 15, 7, 7.5, 4.8, 0, 0, Math.PI * 2);
+            ctx.ellipse(-dir * 6, 8, 5.5, 3.6, 0, 0, Math.PI * 2);
             ctx.fill();
 
-            ctx.fillStyle = isBlue ? '#38bdf8' : '#fbbf24';
+            ctx.fillStyle = scarfColor;
             ctx.beginPath();
-            ctx.roundRect(-27, 22, 54, 12, 6);
+            ctx.roundRect(-28, 21, 56, 12, 6);
             ctx.fill();
             ctx.stroke();
 
-            ctx.fillStyle = isBlue ? '#2563eb' : '#dc2626';
+            ctx.strokeStyle = scarfTrim;
+            ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.arc(dir * 30, 12, 8.5, 0, Math.PI * 2);
+            ctx.moveTo(-dir * 12, 22);
+            ctx.lineTo(-dir * 12, 32);
+            ctx.moveTo(dir * 6, 22);
+            ctx.lineTo(dir * 6, 32);
+            ctx.stroke();
+
+            const armBob = Math.sin(animT * 1.6) * 4;
+            ctx.fillStyle = isBlue ? '#2563eb' : '#dc2626';
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 2.4;
+            ctx.beginPath();
+            ctx.arc(dir * 29, 13 + armBob, 8.2, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
 
             const eyeX = dir * 13;
             const eyeY = -4;
-
-            if (this.hurtTimer > 0) {
-                ctx.strokeStyle = '#0f172a';
-                ctx.lineWidth = 3;
-                [-7, 8].forEach(ox => {
-                    ctx.beginPath();
-                    ctx.moveTo(eyeX + ox - 4, eyeY - 4);
-                    ctx.lineTo(eyeX + ox + 4, eyeY + 4);
-                    ctx.moveTo(eyeX + ox + 4, eyeY - 4);
-                    ctx.lineTo(eyeX + ox - 4, eyeY + 4);
-                    ctx.stroke();
-                });
-            } else if (this.isBlinking) {
+            if (this.isBlinking) {
                 ctx.strokeStyle = '#0f172a';
                 ctx.lineWidth = 3;
                 ctx.beginPath();
@@ -1200,65 +1236,123 @@
                 ctx.strokeStyle = '#0f172a';
                 ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.arc(eyeX - 6, eyeY, 7.5, 0, Math.PI * 2);
-                ctx.arc(eyeX + 7, eyeY, 7.5, 0, Math.PI * 2);
+                ctx.arc(eyeX - 6, eyeY, 7.8, 0, Math.PI * 2);
+                ctx.arc(eyeX + 7, eyeY, 7.8, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
 
+                const lookX = Math.cos(this.aimAngle) * 2.6;
+                const lookY = Math.sin(this.aimAngle) * 2.2;
                 ctx.fillStyle = '#0f172a';
                 ctx.beginPath();
-                ctx.arc(eyeX - 4 + dir * 2, eyeY, 3.6, 0, Math.PI * 2);
-                ctx.arc(eyeX + 9 + dir * 2, eyeY, 3.6, 0, Math.PI * 2);
+                ctx.arc(eyeX - 4 + lookX, eyeY + lookY, 3.8, 0, Math.PI * 2);
+                ctx.arc(eyeX + 9 + lookX, eyeY + lookY, 3.8, 0, Math.PI * 2);
                 ctx.fill();
 
                 ctx.fillStyle = '#ffffff';
                 ctx.beginPath();
-                ctx.arc(eyeX - 5 + dir * 2, eyeY - 1.5, 1.4, 0, Math.PI * 2);
-                ctx.arc(eyeX + 8 + dir * 2, eyeY - 1.5, 1.4, 0, Math.PI * 2);
+                ctx.arc(eyeX - 5.2 + lookX, eyeY - 1.6 + lookY, 1.6, 0, Math.PI * 2);
+                ctx.arc(eyeX + 7.8 + lookX, eyeY - 1.6 + lookY, 1.6, 0, Math.PI * 2);
                 ctx.fill();
 
                 if (this.charging || this.rapidTimer > 0) {
                     ctx.strokeStyle = '#0f172a';
                     ctx.lineWidth = 3;
                     ctx.beginPath();
-                    ctx.moveTo(eyeX - 12, eyeY - 10);
+                    ctx.moveTo(eyeX - 12, eyeY - 11);
                     ctx.lineTo(eyeX, eyeY - 6);
-                    ctx.moveTo(eyeX + 13, eyeY - 10);
+                    ctx.moveTo(eyeX + 13, eyeY - 11);
                     ctx.lineTo(eyeX + 2, eyeY - 6);
+                    ctx.stroke();
+                } else {
+                    ctx.strokeStyle = '#0f172a';
+                    ctx.lineWidth = 2.4;
+                    ctx.beginPath();
+                    ctx.arc(eyeX - 6, eyeY - 8, 5, Math.PI * 1.15, Math.PI * 1.85);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(eyeX + 7, eyeY - 8, 5, Math.PI * 1.15, Math.PI * 1.85);
                     ctx.stroke();
                 }
             }
 
             ctx.strokeStyle = '#0f172a';
             ctx.lineWidth = 2.5;
-            ctx.beginPath();
             if (this.charging) {
-                ctx.arc(dir * 14, 14, 5, 0, Math.PI * 2);
+                ctx.fillStyle = '#fb7185';
+                ctx.beginPath();
+                ctx.ellipse(dir * 13, 14, 5.5, 6.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            } else if (!this.grounded && this.vy < -100) {
+                ctx.fillStyle = '#fda4af';
+                ctx.beginPath();
+                ctx.arc(dir * 13, 13, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
             } else {
-                ctx.arc(dir * 13, 11, 7, 0.15 * Math.PI, 0.85 * Math.PI);
+                ctx.fillStyle = '#fda4af';
+                ctx.beginPath();
+                ctx.arc(dir * 13, 10, 7.5, 0.1 * Math.PI, 0.9 * Math.PI);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
             }
-            ctx.stroke();
 
-            ctx.fillStyle = isBlue ? '#2563eb' : '#dc2626';
-            ctx.strokeStyle = '#0f172a';
-            ctx.lineWidth = 2.5;
-            ctx.beginPath();
-            ctx.arc(0, -10, this.headRadius + 1, Math.PI * 1.05, Math.PI * 1.95);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
+            if (this.avatarType === 'goggles') {
+                ctx.fillStyle = isBlue ? '#1d4ed8' : '#b91c1c';
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.roundRect(-36, -24, 72, 16, 8);
+                ctx.fill();
+                ctx.stroke();
 
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.roundRect(-35, -18, 70, 11, 5);
-            ctx.fill();
-            ctx.stroke();
+                ctx.fillStyle = '#38bdf8';
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.roundRect(-24, -18, 20, 14, 5);
+                ctx.roundRect(4, -18, 20, 14, 5);
+                ctx.fill();
+                ctx.stroke();
+            } else if (this.avatarType === 'icecrown') {
+                ctx.fillStyle = '#7dd3fc';
+                ctx.strokeStyle = '#0284c7';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(-32, -16);
+                ctx.lineTo(-24, -44);
+                ctx.lineTo(-8, -26);
+                ctx.lineTo(0, -48);
+                ctx.lineTo(8, -26);
+                ctx.lineTo(24, -44);
+                ctx.lineTo(32, -16);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            } else {
+                ctx.fillStyle = isBlue ? '#2563eb' : '#dc2626';
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.arc(0, -10, this.headRadius + 1, Math.PI * 1.05, Math.PI * 1.95);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
 
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath();
-            ctx.arc(-dir * 6, -47, 10.5, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.roundRect(-35, -18, 70, 11, 5);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(-dir * 6, -47, 10.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
 
             if (this.frozenTimer > 0) {
                 ctx.fillStyle = 'rgba(125, 211, 252, 0.55)';
@@ -1272,8 +1366,7 @@
 
             ctx.restore();
 
-            // Aktif insan oyuncu için seçilen açı ve hız doğrultusunda nişan yayı
-            if (this.isHuman && (this.charging || (this.controlScheme === 'p1' && aimInput.mouseActive))) {
+            if (this.isHuman && (this.charging || aimInput.mouseActive)) {
                 const hb = this.getHitbox();
                 const originX = 0;
                 const originY = hb.y - this.y;
@@ -1292,17 +1385,6 @@
                 }
                 ctx.stroke();
                 ctx.restore();
-
-                const sbR = this.megaAmmo > 0 ? 18 : (8 + this.charge * 4);
-                const handX = Math.cos(this.aimAngle) * 36;
-                const handY = originY + Math.sin(this.aimAngle) * 36;
-                ctx.fillStyle = this.freezeAmmo > 0 ? '#7dd3fc' : (this.megaAmmo > 0 ? '#fef08a' : '#ffffff');
-                ctx.strokeStyle = '#0284c7';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(handX, handY, sbR, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
             }
 
             const topY = this.isDucking ? -68 : -108;
@@ -1317,9 +1399,6 @@
         }
     }
 
-    // ==========================================
-    // 4. HAVADAKİ GİZEM BUZ KUTULARI
-    // ==========================================
     const MYSTERY_POWERS = [
         { type: 'mega',      label: 'DEV KARTOPU!', icon: '☄️', color: '#f59e0b' },
         { type: 'freeze',    label: 'BUZ DONDURUCU!', icon: '🥶', color: '#38bdf8' },
@@ -1354,9 +1433,6 @@
         }
     }
 
-    // ==========================================
-    // 5. EFEKTLER
-    // ==========================================
     function spawnSnowPuff(x, y, count = 12, color = '#ffffff') {
         for (let i = 0; i < count; i++) {
             const ang = rand(0, Math.PI * 2);
@@ -1382,9 +1458,27 @@
         state.shakePower = power;
     }
 
-    // ==========================================
-    // 6. ÇEVRİMİÇİ LOBİ
-    // ==========================================
+    function maxBotsPerTeam() {
+        return config.format === '2v2' ? 2 : 1;
+    }
+
+    function clampBotCounts() {
+        if (!config.bots || typeof config.bots !== 'object') {
+            config.bots = { blue: 0, red: 1 };
+        }
+        if (!Array.isArray(config.botDifficulties)) {
+            config.botDifficulties = [config.difficulty || 'medium'];
+        }
+        const maxTeam = maxBotsPerTeam();
+        if (config.playersMode === '1p') {
+            config.bots.blue = clamp(Number(config.bots.blue) || 0, 0, Math.max(0, maxTeam - 1));
+            config.bots.red = clamp(Number(config.bots.red) || 0, 0, maxTeam);
+        } else {
+            config.bots.blue = clamp(Number(config.bots.blue) || 0, 0, maxTeam);
+            config.bots.red = clamp(Number(config.bots.red) || 0, 0, maxTeam);
+        }
+    }
+
     function generateRoomCode() {
         const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         let code = '';
@@ -1392,54 +1486,227 @@
         return code;
     }
 
+    function createEmptySlot(team, indexInTeam) {
+        return {
+            team,
+            slotIndex: indexInTeam,
+            name: '',
+            isHuman: false,
+            isBot: false,
+            controlScheme: 'empty',
+            ready: false,
+            aiDifficulty: config.difficulty || 'medium'
+        };
+    }
+
+    function syncConfigBotsFromLobby() {
+        const blueBots = lobbyState.slots.filter(s => s.team === 'blue' && s.isBot);
+        const redBots = lobbyState.slots.filter(s => s.team === 'red' && s.isBot);
+        config.bots.blue = blueBots.length;
+        config.bots.red = redBots.length;
+        config.botDifficulties = [...blueBots, ...redBots].map(b => b.aiDifficulty || config.difficulty || 'medium');
+    }
+
     function buildLobbySlots(customCode = null) {
-        if (customCode) lobbyState.roomCode = customCode;
-        const nick = (document.getElementById('player-nick').value || 'KışKafası').trim() || 'KışKafası';
-        if (config.format === '1v1') {
-            lobbyState.slots = [
-                { team: 'blue', name: nick, isHuman: true, controlScheme: 'p1', ready: true },
-                { team: 'red',  name: 'KışRakibi', isHuman: false, controlScheme: 'ai', ready: true }
-            ];
-        } else {
-            lobbyState.slots = [
-                { team: 'blue', name: nick, isHuman: true, controlScheme: 'p1', ready: true },
-                { team: 'blue', name: 'MaviYıldız', isHuman: false, controlScheme: 'ai', ready: true },
-                { team: 'red',  name: 'KızılFırtına', isHuman: false, controlScheme: 'ai', ready: true },
-                { team: 'red',  name: 'BuzKralı', isHuman: false, controlScheme: 'ai', ready: true }
-            ];
+        if (customCode) {
+            lobbyState.roomCode = customCode;
+            lobbyState.roomCreated = true;
         }
+        const nick = (document.getElementById('player-nick').value || 'KışOyuncusu').trim() || 'KışOyuncusu';
+        const fmt = config.format || '1v1';
+
+        if (!lobbyState.roomCreated) {
+            lobbyState.slots = [];
+            syncConfigBotsFromLobby();
+            renderLobby();
+            return;
+        }
+
+        const existingHuman = lobbyState.slots.find(s => s.isHuman);
+        const humanTeam = existingHuman ? existingHuman.team : 'blue';
+        const humanReady = existingHuman ? existingHuman.ready : true;
+
+        const existingBlueBots = lobbyState.slots.filter(s => s.team === 'blue' && s.isBot);
+        const existingRedBots = lobbyState.slots.filter(s => s.team === 'red' && s.isBot);
+
+        if (fmt === '1v1') {
+            const nextSlots = [createEmptySlot('blue', 0), createEmptySlot('red', 0)];
+            const hSlot = nextSlots.find(s => s.team === humanTeam) || nextSlots[0];
+            hSlot.name = nick;
+            hSlot.isHuman = true;
+            hSlot.isBot = false;
+            hSlot.controlScheme = 'p1';
+            hSlot.ready = humanReady;
+
+            const otherSlot = nextSlots.find(s => s !== hSlot);
+            const otherBots = otherSlot.team === 'blue' ? existingBlueBots : existingRedBots;
+            if (otherBots[0]) {
+                otherSlot.name = otherBots[0].name || 'KızılFırtına';
+                otherSlot.isBot = true;
+                otherSlot.controlScheme = 'ai';
+                otherSlot.ready = true;
+                otherSlot.aiDifficulty = otherBots[0].aiDifficulty || config.difficulty || 'medium';
+            }
+
+            lobbyState.slots = nextSlots;
+        } else {
+            const nextSlots = [
+                createEmptySlot('blue', 0),
+                createEmptySlot('blue', 1),
+                createEmptySlot('red', 0),
+                createEmptySlot('red', 1)
+            ];
+
+            const hSlot = nextSlots.find(s => s.team === humanTeam) || nextSlots[0];
+            hSlot.name = nick;
+            hSlot.isHuman = true;
+            hSlot.isBot = false;
+            hSlot.controlScheme = 'p1';
+            hSlot.ready = humanReady;
+
+            const blueOpenSlots = nextSlots.filter(s => s.team === 'blue' && !s.isHuman);
+            existingBlueBots.slice(0, blueOpenSlots.length).forEach((bot, idx) => {
+                blueOpenSlots[idx].name = bot.name || `MaviBot${idx + 1}`;
+                blueOpenSlots[idx].isBot = true;
+                blueOpenSlots[idx].controlScheme = 'ai';
+                blueOpenSlots[idx].ready = true;
+                blueOpenSlots[idx].aiDifficulty = bot.aiDifficulty || config.difficulty || 'medium';
+            });
+
+            const redOpenSlots = nextSlots.filter(s => s.team === 'red' && !s.isHuman);
+            existingRedBots.slice(0, redOpenSlots.length).forEach((bot, idx) => {
+                redOpenSlots[idx].name = bot.name || (idx === 0 ? 'KızılFırtına' : `KızılBot${idx + 1}`);
+                redOpenSlots[idx].isBot = true;
+                redOpenSlots[idx].controlScheme = 'ai';
+                redOpenSlots[idx].ready = true;
+                redOpenSlots[idx].aiDifficulty = bot.aiDifficulty || config.difficulty || 'medium';
+            });
+
+            lobbyState.slots = nextSlots;
+        }
+
+        syncConfigBotsFromLobby();
         renderLobby();
     }
 
+    function addBotToSlot(slotIdx) {
+        const slot = lobbyState.slots[slotIdx];
+        if (!slot || slot.isHuman || slot.isBot) return;
+        const teamBotCount = lobbyState.slots.filter(s => s.team === slot.team && s.isBot).length;
+        const defaultName = slot.team === 'blue'
+            ? (teamBotCount === 0 ? 'MaviYıldız' : `MaviBot${teamBotCount + 1}`)
+            : (teamBotCount === 0 ? 'KızılFırtına' : `KızılBot${teamBotCount + 1}`);
+
+        slot.name = defaultName;
+        slot.isBot = true;
+        slot.isHuman = false;
+        slot.controlScheme = 'ai';
+        slot.ready = true;
+        slot.aiDifficulty = config.difficulty || 'medium';
+        syncConfigBotsFromLobby();
+        renderLobby();
+        refreshMenuFlow();
+        document.getElementById('lobby-status-msg').textContent = `${slot.team === 'blue' ? 'Mavi' : 'Kırmızı'} takıma ${slot.name} eklendi. Kaldırmak için üzerine tıklayın.`;
+    }
+
+    function removeBotFromSlot(slotIdx) {
+        const slot = lobbyState.slots[slotIdx];
+        if (!slot || !slot.isBot) return;
+        const removedName = slot.name;
+        slot.name = '';
+        slot.isBot = false;
+        slot.isHuman = false;
+        slot.controlScheme = 'empty';
+        slot.ready = false;
+        syncConfigBotsFromLobby();
+        renderLobby();
+        refreshMenuFlow();
+        document.getElementById('lobby-status-msg').textContent = `${removedName} odadan çıkarıldı.`;
+    }
+
     function renderLobby() {
-        document.getElementById('lobby-room-code').textContent = lobbyState.roomCode;
+        document.getElementById('lobby-room-code').textContent = lobbyState.roomCreated ? lobbyState.roomCode : '—';
         const container = document.getElementById('lobby-roster');
+        if (!lobbyState.roomCreated) {
+            container.innerHTML = '<div class="col-span-full text-xs font-bold text-sky-900 bg-white/80 rounded-xl px-3 py-2 border border-sky-200">Henüz oda kurulmadı. <b>Yeni Oda</b>\'ya basıp format seçin veya kod girip <b>Katıl</b>\'a basın.</div>';
+            return;
+        }
         container.innerHTML = lobbyState.slots.map((s, idx) => {
-            const teamClass = s.team === 'blue'
+            const isBlue = s.team === 'blue';
+            const teamLabel = isBlue ? 'MAVİ' : 'KIRMIZI';
+
+            if (!s.isHuman && !s.isBot) {
+                const emptyBorder = isBlue ? 'bg-blue-50/70 border-dashed border-blue-300 text-blue-900' : 'bg-red-50/70 border-dashed border-red-300 text-red-900';
+                return `
+                    <button type="button" data-slot-add-bot="${idx}" class="rounded-xl border-2 p-2 ${emptyBorder} hover:bg-white transition flex flex-col justify-between gap-1 text-left cursor-pointer">
+                        <div class="font-black text-slate-500">Boş Yer (${teamLabel})</div>
+                        <div class="inline-flex items-center justify-center gap-1 py-1 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-black shadow-sm">
+                            <span>+ Bot Ekle</span>
+                        </div>
+                    </button>
+                `;
+            }
+
+            const teamClass = isBlue
                 ? 'bg-blue-50 border-blue-300 text-blue-900'
                 : 'bg-red-50 border-red-300 text-red-900';
-            const tag = s.isHuman ? '👤 SİZ' : '🤖 BOT';
+
+            if (s.isBot) {
+                return `
+                    <div data-slot-remove-bot="${idx}" title="Botu çıkarmak için tıklayın" class="rounded-xl border-2 p-2 ${teamClass} hover:border-rose-500 hover:bg-rose-50 transition flex flex-col justify-between gap-1 cursor-pointer">
+                        <div class="flex items-center justify-between gap-1">
+                            <span class="font-black truncate">🤖 ${s.name}</span>
+                            <span class="text-[10px] font-black px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-300">Bot Çıkar ×</span>
+                        </div>
+                        <div class="flex items-center justify-between text-[10px] font-bold">
+                            <span>${teamLabel} • BOT</span>
+                            <span class="text-slate-600">Tıkla: Çıkar</span>
+                        </div>
+                    </div>
+                `;
+            }
+
             return `
                 <div class="rounded-xl border-2 p-2 ${teamClass} flex flex-col justify-between gap-1">
                     <div class="font-black truncate">${s.name}</div>
                     <div class="flex items-center justify-between text-[10px] font-bold">
-                        <span>${s.team === 'blue' ? 'MAVİ' : 'KIRMIZI'} • ${tag}</span>
+                        <span>${teamLabel} • 👤 SİZ</span>
                         <span class="text-emerald-700">${s.ready ? 'HAZIR' : 'BEKLİYOR'}</span>
                     </div>
-                    ${s.isHuman ? `
-                        <div class="flex gap-1 mt-0.5">
-                            <button type="button" data-slot-swap="${idx}" class="px-1.5 py-0.5 rounded bg-white/90 border border-slate-300 text-[10px] font-bold hover:bg-white cursor-pointer">Takım Değiştir</button>
-                            <button type="button" data-slot-ready="${idx}" class="px-1.5 py-0.5 rounded bg-white/90 border border-slate-300 text-[10px] font-bold hover:bg-white cursor-pointer">${s.ready ? 'Hazır ✓' : 'Hazır Yap'}</button>
-                        </div>
-                    ` : ''}
+                    <div class="flex gap-1 mt-0.5">
+                        <button type="button" data-slot-swap="${idx}" class="px-1.5 py-0.5 rounded bg-white/90 border border-slate-300 text-[10px] font-bold hover:bg-white cursor-pointer">Takım Değiştir</button>
+                        <button type="button" data-slot-ready="${idx}" class="px-1.5 py-0.5 rounded bg-white/90 border border-slate-300 text-[10px] font-bold hover:bg-white cursor-pointer">${s.ready ? 'Hazır ✓' : 'Hazır Yap'}</button>
+                    </div>
                 </div>
             `;
         }).join('');
 
+        container.querySelectorAll('[data-slot-add-bot]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                addBotToSlot(Number(btn.dataset.slotAddBot));
+            });
+        });
+
+        container.querySelectorAll('[data-slot-remove-bot]').forEach(card => {
+            card.addEventListener('click', () => {
+                removeBotFromSlot(Number(card.dataset.slotRemoveBot));
+            });
+        });
+
         container.querySelectorAll('[data-slot-swap]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const i = Number(btn.dataset.slotSwap);
-                lobbyState.slots[i].team = lobbyState.slots[i].team === 'blue' ? 'red' : 'blue';
+                const humanSlot = lobbyState.slots[i];
+                const targetTeam = humanSlot.team === 'blue' ? 'red' : 'blue';
+                const targetSlot = lobbyState.slots.find(s => s.team === targetTeam && !s.isHuman);
+                if (targetSlot) {
+                    const prevTeam = humanSlot.team;
+                    humanSlot.team = targetTeam;
+                    targetSlot.team = prevTeam;
+                } else {
+                    humanSlot.team = targetTeam;
+                }
+                syncConfigBotsFromLobby();
                 renderLobby();
             });
         });
@@ -1453,17 +1720,77 @@
         });
     }
 
-    // ==========================================
-    // 7. MAÇ VE TUR YÖNETİMİ
-    // ==========================================
+    function refreshMenuFlow() {
+        const formatStep = document.getElementById('format-step');
+        const onlineBox = document.getElementById('online-lobby-box');
+        const hintMsg = document.getElementById('menu-hint-msg');
+
+        const isOnline = config.playersMode === 'online';
+        onlineBox.classList.toggle('hidden', !isOnline);
+
+        const showFormatStep = config.playersMode === '1p';
+        formatStep.classList.toggle('hidden', !showFormatStep);
+
+        const activeRoomFmt = config.format || '1v1';
+        const roomFmtSelector = document.getElementById('room-fmt-selector');
+        const activeRoomFmtBadge = document.getElementById('active-room-fmt-badge');
+        const btnCreateRoom = document.getElementById('btn-create-room');
+        const btnLeaveRoom = document.getElementById('btn-leave-room');
+
+        if (isOnline && lobbyState.roomCreated) {
+            roomFmtSelector.classList.add('hidden');
+            activeRoomFmtBadge.classList.remove('hidden');
+            activeRoomFmtBadge.textContent = `FORMAT: ${activeRoomFmt.toUpperCase()}`;
+            btnCreateRoom.classList.add('hidden');
+            btnLeaveRoom.classList.remove('hidden');
+        } else {
+            roomFmtSelector.classList.remove('hidden');
+            activeRoomFmtBadge.classList.add('hidden');
+            btnCreateRoom.classList.remove('hidden');
+            btnLeaveRoom.classList.add('hidden');
+        }
+
+        document.querySelectorAll('.room-fmt-btn').forEach(btn => {
+            const isSel = btn.dataset.roomFormat === activeRoomFmt;
+            btn.className = isSel
+                ? 'room-fmt-btn px-2 py-1 rounded-lg bg-sky-600 text-white text-[11px] font-black cursor-pointer'
+                : 'room-fmt-btn px-2 py-1 rounded-lg text-sky-900 hover:bg-sky-100 text-[11px] font-black cursor-pointer';
+        });
+
+        clampBotCounts();
+
+        if (!config.playersMode) {
+            hintMsg.textContent = 'Başlamak için 1. Oyuncu Modunu (Tek Kişi veya Çevrim İçi) seçin.';
+        } else if (isOnline && !lobbyState.roomCreated) {
+            hintMsg.textContent = 'Çevrim İçi modda Yeni Oda\'nın yanından 1v1/2v2 seçip Yeni Oda\'ya basın veya kod ile katılın.';
+        } else if (!config.format) {
+            hintMsg.textContent = 'Şimdi 1 vs 1 veya 2 vs 2 formatını seçin.';
+        } else {
+            hintMsg.textContent = 'Hazır! İsterseniz maçı başlatabilir veya tuş düzenini ayarlayabilirsiniz.';
+        }
+    }
+
     function getSpawnPositions(count, side) {
-        if (count === 1) {
+        if (count <= 1) {
             return side === 'blue' ? [300] : [WORLD_W - 300];
         }
         return side === 'blue' ? [210, 440] : [WORLD_W - 210, WORLD_W - 440];
     }
 
     function startMatch() {
+        if (!config.playersMode) {
+            document.getElementById('menu-hint-msg').textContent = '⚠️ Önce Tek Kişi veya Çevrim İçi modunu seçmelisiniz.';
+            return;
+        }
+        if (config.playersMode === 'online' && !lobbyState.roomCreated) {
+            document.getElementById('menu-hint-msg').textContent = '⚠️ Önce Yeni Oda\'ya basıp format seçin veya bir odaya katılın.';
+            return;
+        }
+        if (!config.format) {
+            document.getElementById('menu-hint-msg').textContent = '⚠️ Lütfen 1 vs 1 veya 2 vs 2 formatını seçin.';
+            return;
+        }
+
         sfx.init();
         state.round = 1;
         state.blueScore = 0;
@@ -1471,13 +1798,13 @@
         state.players = [];
 
         const is2v2 = config.format === '2v2';
-        const is2P = config.playersMode === '2p';
         const isOnline = config.playersMode === 'online';
 
         if (isOnline) {
             if (!lobbyState.slots.length) buildLobbySlots();
-            const blues = lobbyState.slots.filter(s => s.team === 'blue');
-            const reds = lobbyState.slots.filter(s => s.team === 'red');
+            const activeSlots = lobbyState.slots.filter(s => s.isHuman || s.isBot);
+            const blues = activeSlots.filter(s => s.team === 'blue');
+            const reds = activeSlots.filter(s => s.team === 'red');
             const bPos = getSpawnPositions(blues.length, 'blue');
             const rPos = getSpawnPositions(reds.length, 'red');
 
@@ -1488,7 +1815,9 @@
                     team: 'blue',
                     isHuman: s.isHuman,
                     controlScheme: s.controlScheme,
-                    x: bPos[i] ?? 260
+                    x: bPos[i] ?? 260,
+                    avatarType: s.isHuman ? config.avatarType : 'beanie',
+                    aiDifficulty: s.aiDifficulty || config.difficulty || 'medium'
                 }));
             });
             reds.forEach((s, i) => {
@@ -1498,34 +1827,37 @@
                     team: 'red',
                     isHuman: s.isHuman,
                     controlScheme: s.isHuman ? 'p2' : 'ai',
-                    x: rPos[i] ?? (WORLD_W - 260)
+                    x: rPos[i] ?? (WORLD_W - 260),
+                    avatarType: 'goggles',
+                    aiDifficulty: s.aiDifficulty || config.difficulty || 'medium'
                 }));
             });
         } else if (!is2v2) {
             state.players.push(new HeadBallCharacter({
-                id: 1, name: 'Mavi Kafa', team: 'blue', isHuman: true, controlScheme: 'p1', x: 300
+                id: 1, name: 'Mavi Kafa', team: 'blue', isHuman: true, controlScheme: 'p1', x: 300, avatarType: config.avatarType
             }));
             state.players.push(new HeadBallCharacter({
-                id: 2, name: is2P ? 'Kırmızı Kafa' : 'Kızıl Bot', team: 'red', isHuman: is2P, controlScheme: is2P ? 'p2' : 'ai', x: WORLD_W - 300
+                id: 2, name: 'Kızıl Bot', team: 'red', isHuman: false, controlScheme: 'ai', x: WORLD_W - 300, avatarType: 'goggles', aiDifficulty: config.difficulty
             }));
         } else {
             state.players.push(new HeadBallCharacter({
-                id: 1, name: '1. Oyuncu', team: 'blue', isHuman: true, controlScheme: 'p1', x: 210
+                id: 1, name: '1. Oyuncu', team: 'blue', isHuman: true, controlScheme: 'p1', x: 210, avatarType: config.avatarType
             }));
             state.players.push(new HeadBallCharacter({
-                id: 2, name: 'Mavi Ortak', team: 'blue', isHuman: false, controlScheme: 'ai', x: 440
+                id: 2, name: 'Mavi Ortak', team: 'blue', isHuman: false, controlScheme: 'ai', x: 440, avatarType: 'icecrown', aiDifficulty: config.difficulty
             }));
             state.players.push(new HeadBallCharacter({
-                id: 3, name: is2P ? '2. Oyuncu' : 'Kızıl Kaptan', team: 'red', isHuman: is2P, controlScheme: is2P ? 'p2' : 'ai', x: WORLD_W - 210
+                id: 3, name: 'Kızıl Kaptan', team: 'red', isHuman: false, controlScheme: 'ai', x: WORLD_W - 210, avatarType: 'goggles', aiDifficulty: config.difficulty
             }));
             state.players.push(new HeadBallCharacter({
-                id: 4, name: 'Kızıl Bot', team: 'red', isHuman: false, controlScheme: 'ai', x: WORLD_W - 440
+                id: 4, name: 'Kızıl Bot', team: 'red', isHuman: false, controlScheme: 'ai', x: WORLD_W - 440, avatarType: 'beanie', aiDifficulty: config.difficulty
             }));
         }
 
         document.getElementById('main-menu').classList.add('hidden');
         document.getElementById('gameover-modal').classList.add('hidden');
         document.getElementById('hud').classList.remove('hidden');
+        enterMobileMatchImmersion();
         syncTouchVisibility();
 
         setupRound();
@@ -1665,9 +1997,6 @@
     }
     function hideBanner() { document.getElementById('banner-overlay').classList.add('hidden'); }
 
-    // ==========================================
-    // 8. FİZİK GÜNCELLEME VE GENİŞ KIŞ SAHNESİ ÇİZİMİ
-    // ==========================================
     function update(dt) {
         for (const f of state.snowflakes) {
             f.sway += dt * 2;
@@ -1772,7 +2101,6 @@
                 continue;
             }
 
-            let hitPlayer = false;
             for (const p of state.players) {
                 if (!p.isAlive || p.team === sb.team) continue;
                 const hb = p.getHitbox();
@@ -1782,49 +2110,11 @@
                     sfx.playHit(sb.isMega);
                     spawnSnowPuff(sb.x, sb.y, sb.isMega ? 26 : 16, '#ffffff');
                     triggerShake(0.14, sb.isMega ? 8 : 4);
-                    hitPlayer = true;
+                    state.snowballs.splice(i, 1);
                     break;
                 }
             }
-            if (hitPlayer) {
-                state.snowballs.splice(i, 1);
-            }
         }
-    }
-
-    function drawPineTree(ctx, x, baseY, scale = 1) {
-        ctx.save();
-        ctx.translate(x, baseY);
-        ctx.scale(scale, scale);
-
-        ctx.fillStyle = '#451a03';
-        ctx.fillRect(-7, -22, 14, 22);
-
-        const layers = [
-            { y: -20, w: 46, h: 36 },
-            { y: -44, w: 38, h: 34 },
-            { y: -66, w: 28, h: 30 }
-        ];
-        layers.forEach(l => {
-            ctx.fillStyle = '#0f3d2e';
-            ctx.beginPath();
-            ctx.moveTo(0, l.y - l.h);
-            ctx.lineTo(-l.w, l.y);
-            ctx.lineTo(l.w, l.y);
-            ctx.closePath();
-            ctx.fill();
-
-            ctx.fillStyle = '#f1f5f9';
-            ctx.beginPath();
-            ctx.moveTo(0, l.y - l.h);
-            ctx.lineTo(-l.w * 0.52, l.y - l.h * 0.45);
-            ctx.lineTo(0, l.y - l.h * 0.32);
-            ctx.lineTo(l.w * 0.52, l.y - l.h * 0.45);
-            ctx.closePath();
-            ctx.fill();
-        });
-
-        ctx.restore();
     }
 
     function drawSideArena(ctx) {
@@ -1834,30 +2124,6 @@
         skyGrad.addColorStop(1, '#bae6fd');
         ctx.fillStyle = skyGrad;
         ctx.fillRect(0, 0, WORLD_W, GROUND_Y);
-
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.72)';
-        for (let i = 0; i < 36; i++) {
-            const sx = ((i * 233) % (WORLD_W - 40)) + 20;
-            const sy = ((i * 89) % 180) + 25;
-            ctx.beginPath();
-            ctx.arc(sx, sy, (i % 2) + 1, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        const wave = Math.sin(performance.now() * 0.0012) * 26;
-        const auroraGrad = ctx.createLinearGradient(0, 55, WORLD_W, 250);
-        auroraGrad.addColorStop(0, 'rgba(52, 211, 153, 0.0)');
-        auroraGrad.addColorStop(0.35, 'rgba(52, 211, 153, 0.24)');
-        auroraGrad.addColorStop(0.68, 'rgba(56, 189, 248, 0.26)');
-        auroraGrad.addColorStop(1, 'rgba(168, 85, 247, 0.0)');
-        ctx.fillStyle = auroraGrad;
-        ctx.beginPath();
-        ctx.moveTo(0, 120);
-        ctx.bezierCurveTo(WORLD_W * 0.3, 60 + wave, WORLD_W * 0.7, 210 - wave, WORLD_W, 130);
-        ctx.lineTo(WORLD_W, 265);
-        ctx.bezierCurveTo(WORLD_W * 0.7, 315 - wave, WORLD_W * 0.3, 185 + wave, 0, 245);
-        ctx.closePath();
-        ctx.fill();
 
         ctx.fillStyle = '#334155';
         ctx.beginPath();
@@ -1873,47 +2139,9 @@
         ctx.closePath();
         ctx.fill();
 
-        ctx.fillStyle = '#e2e8f0';
-        [
-            { x: 260, y: 255, lx: 190, ly: 305, rx: 335, ry: 300 },
-            { x: 800, y: 225, lx: 720, ly: 285, rx: 885, ry: 278 },
-            { x: 1400, y: 265, lx: 1330, ly: 310, rx: 1470, ry: 315 }
-        ].forEach(m => {
-            ctx.beginPath();
-            ctx.moveTo(m.x, m.y);
-            ctx.lineTo(m.lx, m.ly);
-            ctx.lineTo(m.x - 16, m.ly - 10);
-            ctx.lineTo(m.x + 16, m.ly + 6);
-            ctx.lineTo(m.rx, m.ry);
-            ctx.closePath();
-            ctx.fill();
-        });
-
-        drawPineTree(ctx, 105, GROUND_Y, 0.85);
-        drawPineTree(ctx, 390, GROUND_Y, 0.72);
-        drawPineTree(ctx, 640, GROUND_Y, 0.62);
-        drawPineTree(ctx, 960, GROUND_Y, 0.64);
-        drawPineTree(ctx, 1210, GROUND_Y, 0.72);
-        drawPineTree(ctx, 1495, GROUND_Y, 0.88);
-
-        [185, WORLD_W - 185].forEach(lx => {
-            ctx.fillStyle = '#475569';
-            ctx.fillRect(lx - 5, 295, 10, GROUND_Y - 295);
-            ctx.fillStyle = '#1e293b';
-            ctx.beginPath();
-            ctx.roundRect(lx - 26, 275, 52, 26, 6);
-            ctx.fill();
-            ctx.fillStyle = '#fef08a';
-            ctx.beginPath();
-            ctx.arc(lx - 12, 288, 6, 0, Math.PI * 2);
-            ctx.arc(lx + 12, 288, 6, 0, Math.PI * 2);
-            ctx.fill();
-        });
-
-        ctx.save();
         const moundGrad = ctx.createLinearGradient(0, GROUND_Y - MOUND_H, 0, GROUND_Y);
         moundGrad.addColorStop(0, '#ffffff');
-        moundGrad.addColorStop(0.42, '#bae6fd');
+        moundGrad.addColorStop(0.45, '#bae6fd');
         moundGrad.addColorStop(1, '#0284c7');
         ctx.fillStyle = moundGrad;
         ctx.strokeStyle = '#0369a1';
@@ -1923,36 +2151,14 @@
         ctx.fill();
         ctx.stroke();
 
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(MOUND_X - 18, GROUND_Y - MOUND_H + 18);
-        ctx.lineTo(MOUND_X - 6, GROUND_Y - MOUND_H + 35);
-        ctx.moveTo(MOUND_X + 10, GROUND_Y - MOUND_H + 22);
-        ctx.lineTo(MOUND_X + 18, GROUND_Y - MOUND_H + 35);
-        ctx.stroke();
-        ctx.restore();
-
         ctx.fillStyle = '#f8fafc';
         ctx.fillRect(0, GROUND_Y, WORLD_W, 24);
-
-        ctx.fillStyle = 'rgba(59, 130, 246, 0.25)';
-        ctx.fillRect(0, GROUND_Y, MOUND_X - MOUND_W / 2, 10);
-        ctx.fillStyle = 'rgba(239, 68, 68, 0.25)';
-        ctx.fillRect(MOUND_X + MOUND_W / 2, GROUND_Y, WORLD_W - (MOUND_X + MOUND_W / 2), 10);
 
         const iceFloorGrad = ctx.createLinearGradient(0, GROUND_Y + 24, 0, WORLD_H);
         iceFloorGrad.addColorStop(0, '#7dd3fc');
         iceFloorGrad.addColorStop(1, '#0369a1');
         ctx.fillStyle = iceFloorGrad;
         ctx.fillRect(0, GROUND_Y + 24, WORLD_W, WORLD_H - (GROUND_Y + 24));
-
-        ctx.strokeStyle = '#cbd5e1';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(0, GROUND_Y);
-        ctx.lineTo(WORLD_W, GROUND_Y);
-        ctx.stroke();
     }
 
     function drawMysteryBoxes(ctx) {
@@ -1960,12 +2166,6 @@
             const floatY = Math.sin(box.bob) * 8;
             ctx.save();
             ctx.translate(box.x, box.y + floatY);
-
-            ctx.fillStyle = box.color + '44';
-            ctx.beginPath();
-            ctx.arc(0, 0, box.size * 0.85, 0, Math.PI * 2);
-            ctx.fill();
-
             const half = box.size / 2;
             ctx.fillStyle = 'rgba(224, 242, 254, 0.94)';
             ctx.strokeStyle = box.color;
@@ -1974,30 +2174,16 @@
             ctx.roundRect(-half, -half, box.size, box.size, 12);
             ctx.fill();
             ctx.stroke();
-
             ctx.font = '24px sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(box.icon, 0, 2);
-
             ctx.restore();
         }
     }
 
     function drawSnowballs(ctx) {
         for (const sb of state.snowballs) {
-            for (let i = 0; i < sb.trail.length; i++) {
-                const t = sb.trail[i];
-                const alpha = (i / sb.trail.length) * 0.45;
-                const r = sb.radius * (i / sb.trail.length) * 0.8;
-                ctx.fillStyle = sb.isFreeze
-                    ? `rgba(125, 211, 252, ${alpha})`
-                    : (sb.isMega ? `rgba(253, 224, 71, ${alpha})` : `rgba(255, 255, 255, ${alpha})`);
-                ctx.beginPath();
-                ctx.arc(t.x, t.y, r, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
             ctx.save();
             ctx.translate(sb.x, sb.y);
             ctx.rotate(sb.rot);
@@ -2007,13 +2193,6 @@
             ctx.beginPath();
             ctx.arc(0, 0, sb.radius, 0, Math.PI * 2);
             ctx.fill();
-            ctx.stroke();
-
-            ctx.strokeStyle = 'rgba(2, 132, 199, 0.45)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(-sb.radius * 0.45, 0);
-            ctx.lineTo(sb.radius * 0.45, 0);
             ctx.stroke();
             ctx.restore();
         }
@@ -2070,20 +2249,15 @@
     function gameLoop(now) {
         const dt = Math.min(0.05, (now - lastTime) / 1000);
         lastTime = now;
-
         update(dt);
         render();
-
         requestAnimationFrame(gameLoop);
     }
 
-    // ==========================================
-    // 9. GİRİŞ, FARE, MOBİL NİŞAN VE MENÜ KONTROLLERİ
-    // ==========================================
     window.addEventListener('keydown', e => {
         keys[e.code] = true;
-        if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
-            if (state.screen === 'playing') e.preventDefault();
+        if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code) && state.screen === 'playing') {
+            e.preventDefault();
         }
     });
     window.addEventListener('keyup', e => { keys[e.code] = false; });
@@ -2116,75 +2290,101 @@
     window.addEventListener('mouseup', e => {
         if (e.button !== 0) return;
         if (aimInput.mouseCharging && state.screen === 'playing') {
-            const p1 = state.players.find(p => p.isHuman && p.controlScheme === 'p1' && p.isAlive);
-            if (p1 && p1.cooldown <= 0) {
-                p1.fireSnowball();
-            }
+            const p1 = state.players.find(p => p.isHuman && p.isAlive);
+            if (p1 && p1.cooldown <= 0) p1.fireSnowball();
             if (p1) p1.charging = false;
         }
         aimInput.mouseCharging = false;
     });
 
-    // Sahada dokunarak sürükle-bırak nişan (mobil)
-    canvas.addEventListener('touchstart', e => {
-        if (state.screen !== 'playing' || !e.changedTouches.length) return;
-        sfx.init();
-        const t = e.changedTouches[0];
-        const { wx, wy } = clientToWorld(t.clientX, t.clientY);
-        const p1 = state.players.find(p => p.isHuman && p.controlScheme === 'p1' && p.isAlive);
-        if (!p1) return;
-        const hb = p1.getHitbox();
-        const dx = wx - hb.x;
-        const dy = wy - hb.y;
-        aimInput.touchAimActive = true;
-        aimInput.touchAimAngle = p1.team === 'blue'
-            ? clamp(Math.atan2(dy, dx), -1.38, 0.42)
-            : clamp(Math.atan2(dy, dx), -(Math.PI - 0.42), -1.76);
-        aimInput.touchAimPower = clamp((Math.hypot(dx, dy) - 40) / 480, 0.15, 1);
-    }, { passive: true });
-
-    canvas.addEventListener('touchmove', e => {
-        if (!aimInput.touchAimActive || !e.changedTouches.length) return;
-        const t = e.changedTouches[0];
-        const { wx, wy } = clientToWorld(t.clientX, t.clientY);
-        const p1 = state.players.find(p => p.isHuman && p.controlScheme === 'p1' && p.isAlive);
-        if (!p1) return;
-        const hb = p1.getHitbox();
-        const dx = wx - hb.x;
-        const dy = wy - hb.y;
-        aimInput.touchAimAngle = p1.team === 'blue'
-            ? clamp(Math.atan2(dy, dx), -1.38, 0.42)
-            : clamp(Math.atan2(dy, dx), -(Math.PI - 0.42), -1.76);
-        aimInput.touchAimPower = clamp((Math.hypot(dx, dy) - 40) / 480, 0.15, 1);
-    }, { passive: true });
-
-    canvas.addEventListener('touchend', () => {
-        if (aimInput.touchAimActive) {
-            aimInput.touchAimActive = false;
-            aimInput.touchReleasePending = true;
-        }
-    });
-
     function bindTouchButton(id, prop) {
         const el = document.getElementById(id);
-        const press = (e) => { e.preventDefault(); sfx.init(); touchState[prop] = true; el.classList.add('pressed'); };
-        const release = (e) => { e.preventDefault(); touchState[prop] = false; el.classList.remove('pressed'); };
+        let draggingPad = false;
+        let dragOffset = { x: 0, y: 0 };
+
+        const startDrag = (clientX, clientY) => {
+            if (!config.touchLayoutEditing) return false;
+            draggingPad = true;
+            const rect = el.getBoundingClientRect();
+            dragOffset = { x: clientX - rect.left, y: clientY - rect.top };
+            el.style.position = 'fixed';
+            el.style.right = 'auto';
+            el.style.bottom = 'auto';
+            el.style.zIndex = '40';
+            return true;
+        };
+
+        const moveDrag = (clientX, clientY) => {
+            if (!draggingPad) return false;
+            const maxX = Math.max(0, window.innerWidth - el.offsetWidth);
+            const maxY = Math.max(0, window.innerHeight - el.offsetHeight);
+            const nx = clamp(clientX - dragOffset.x, 0, maxX);
+            const ny = clamp(clientY - dragOffset.y, 0, maxY);
+            el.style.left = `${nx}px`;
+            el.style.top = `${ny}px`;
+            return true;
+        };
+
+        const stopDrag = () => {
+            if (!draggingPad) return false;
+            draggingPad = false;
+            return true;
+        };
+
+        const press = (e) => {
+            if (config.touchLayoutEditing) {
+                e.preventDefault();
+                const pt = e.touches && e.touches[0] ? e.touches[0] : e;
+                startDrag(pt.clientX, pt.clientY);
+                return;
+            }
+            e.preventDefault();
+            sfx.init();
+            touchState[prop] = true;
+            el.classList.add('pressed');
+        };
+
+        const move = (e) => {
+            if (!draggingPad) return;
+            e.preventDefault();
+            const pt = e.touches && e.touches[0] ? e.touches[0] : e;
+            moveDrag(pt.clientX, pt.clientY);
+        };
+
+        const release = (e) => {
+            if (stopDrag()) {
+                e.preventDefault();
+                return;
+            }
+            e.preventDefault();
+            touchState[prop] = false;
+            el.classList.remove('pressed');
+        };
+
         el.addEventListener('touchstart', press, { passive: false });
+        el.addEventListener('touchmove', move, { passive: false });
         el.addEventListener('touchend', release);
         el.addEventListener('touchcancel', release);
         el.addEventListener('mousedown', press);
-        el.addEventListener('mouseup', release);
-        el.addEventListener('mouseleave', release);
+        window.addEventListener('mousemove', move);
+        window.addEventListener('mouseup', release);
+        el.addEventListener('mouseleave', () => {
+            if (!config.touchLayoutEditing) {
+                touchState[prop] = false;
+                el.classList.remove('pressed');
+            }
+        });
     }
     bindTouchButton('t-left', 'left');
     bindTouchButton('t-right', 'right');
     bindTouchButton('t-jump', 'jump');
     bindTouchButton('t-duck', 'duck');
 
-    // Sağ alttaki Sürükle/At nişan joypad'i
     const aimPad = document.getElementById('t-aim-pad');
     const aimKnob = document.getElementById('t-aim-knob');
     let aimPadCenter = { x: 0, y: 0 };
+    let draggingAimPad = false;
+    let aimDragOffset = { x: 0, y: 0 };
 
     function updateAimPadFromPoint(clientX, clientY) {
         const maxPull = 34;
@@ -2208,22 +2408,43 @@
 
     aimPad.addEventListener('touchstart', e => {
         e.preventDefault();
+        const t = e.changedTouches[0];
+        if (config.touchLayoutEditing) {
+            draggingAimPad = true;
+            const rect = aimPad.getBoundingClientRect();
+            aimDragOffset = { x: t.clientX - rect.left, y: t.clientY - rect.top };
+            aimPad.style.position = 'fixed';
+            aimPad.style.right = 'auto';
+            aimPad.style.bottom = 'auto';
+            aimPad.style.zIndex = '40';
+            return;
+        }
         sfx.init();
         const rect = aimPad.getBoundingClientRect();
         aimPadCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
         aimInput.touchAimActive = true;
-        const t = e.changedTouches[0];
         updateAimPadFromPoint(t.clientX, t.clientY);
     }, { passive: false });
 
     aimPad.addEventListener('touchmove', e => {
         e.preventDefault();
-        if (!aimInput.touchAimActive || !e.changedTouches.length) return;
         const t = e.changedTouches[0];
+        if (draggingAimPad) {
+            const maxX = Math.max(0, window.innerWidth - aimPad.offsetWidth);
+            const maxY = Math.max(0, window.innerHeight - aimPad.offsetHeight);
+            aimPad.style.left = `${clamp(t.clientX - aimDragOffset.x, 0, maxX)}px`;
+            aimPad.style.top = `${clamp(t.clientY - aimDragOffset.y, 0, maxY)}px`;
+            return;
+        }
+        if (!aimInput.touchAimActive || !e.changedTouches.length) return;
         updateAimPadFromPoint(t.clientX, t.clientY);
     }, { passive: false });
 
     function finishAimPad() {
+        if (draggingAimPad) {
+            draggingAimPad = false;
+            return;
+        }
         if (!aimInput.touchAimActive) return;
         aimInput.touchAimActive = false;
         aimInput.touchReleasePending = true;
@@ -2234,49 +2455,159 @@
 
     const touchToggle = document.getElementById('toggle-touch-ui');
     const touchControlsEl = document.getElementById('touch-controls');
-    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) touchToggle.checked = true;
+    const padEditBar = document.getElementById('btn-edit-touch-layout');
+
+    function isMobileViewportOrTouch() {
+        return ('ontouchstart' in window) ||
+            (navigator.maxTouchPoints > 0) ||
+            window.matchMedia('(max-width: 900px)').matches ||
+            window.matchMedia('(pointer: coarse)').matches;
+    }
+
+    if (isMobileViewportOrTouch()) touchToggle.checked = true;
+
+    function applyTouchEditVisuals() {
+        padEditBar.classList.toggle('hidden', !config.touchLayoutEditing);
+        ['t-left', 't-right', 't-duck', 't-jump', 't-aim-pad'].forEach(id => {
+            const node = document.getElementById(id);
+            if (node) node.classList.toggle('edit-mode-active', config.touchLayoutEditing);
+        });
+    }
+
+    function setPadEditMode(enabled) {
+        config.touchLayoutEditing = Boolean(enabled);
+        if (config.touchLayoutEditing) {
+            touchToggle.checked = true;
+            touchState.left = false;
+            touchState.right = false;
+            touchState.jump = false;
+            touchState.duck = false;
+            aimInput.touchAimActive = false;
+            aimInput.touchReleasePending = false;
+            document.getElementById('main-menu').classList.add('hidden');
+            document.getElementById('hud').classList.remove('hidden');
+            touchControlsEl.classList.remove('hidden');
+            touchControlsEl.style.display = 'block';
+        } else if (state.screen === 'menu') {
+            document.getElementById('hud').classList.add('hidden');
+            document.getElementById('main-menu').classList.remove('hidden');
+        }
+        applyTouchEditVisuals();
+        syncTouchVisibility();
+    }
+
+    function resetTouchLayoutPositions() {
+        ['t-left', 't-right', 't-duck', 't-jump', 't-aim-pad'].forEach(id => {
+            const node = document.getElementById(id);
+            if (node) {
+                node.style.position = '';
+                node.style.left = '';
+                node.style.top = '';
+                node.style.right = '';
+                node.style.bottom = '';
+                node.style.zIndex = '';
+            }
+        });
+    }
+
+    document.getElementById('btn-open-pad-editor').addEventListener('click', () => setPadEditMode(true));
+    document.getElementById('btn-ingame-pad-editor').addEventListener('click', () => setPadEditMode(!config.touchLayoutEditing));
+    document.getElementById('btn-done-touch-layout').addEventListener('click', () => setPadEditMode(false));
+    document.getElementById('btn-reset-touch-layout').addEventListener('click', resetTouchLayoutPositions);
 
     function syncTouchVisibility() {
-        const visible = touchToggle.checked && (state.screen === 'playing' || state.screen === 'roundIntro');
+        const isInMatch = state.screen === 'playing' || state.screen === 'roundIntro' || state.screen === 'roundEnd';
+        if (isMobileViewportOrTouch() && isInMatch) {
+            touchToggle.checked = true;
+        }
+        const visible = config.touchLayoutEditing || ((touchToggle.checked || isMobileViewportOrTouch()) && isInMatch);
         touchControlsEl.classList.toggle('hidden', !visible);
+        touchControlsEl.style.display = visible ? 'block' : 'none';
     }
-    touchToggle.addEventListener('change', syncTouchVisibility);
+    window.addEventListener('resize', () => {
+        if (isMobileViewportOrTouch()) touchToggle.checked = true;
+        syncTouchVisibility();
+    });
+    touchToggle.addEventListener('change', () => {
+        if (touchToggle.checked && state.screen === 'menu' && !config.touchLayoutEditing) {
+            setPadEditMode(true);
+            return;
+        }
+        syncTouchVisibility();
+    });
 
-    function syncLobbyVisibility() {
-        const show = config.playersMode === 'online';
-        document.getElementById('online-lobby-box').classList.toggle('hidden', !show);
-        if (show && !lobbyState.slots.length) buildLobbySlots();
-    }
+    document.querySelectorAll('.avatar-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.avatar-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            config.avatarType = btn.dataset.avatar;
+        });
+    });
+
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            config.playersMode = btn.dataset.players;
+            if (config.playersMode === 'online') {
+                lobbyState.roomCreated = false;
+                lobbyState.slots = [];
+                config.format = '1v1';
+                config.bots = { blue: 0, red: 0 };
+                config.botDifficulties = [];
+                renderLobby();
+            } else {
+                lobbyState.roomCreated = false;
+                config.bots = { blue: 0, red: 1 };
+                config.botDifficulties = [config.difficulty || 'medium'];
+            }
+            refreshMenuFlow();
+        });
+    });
 
     document.querySelectorAll('.format-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             config.format = btn.dataset.format;
-            if (config.playersMode === 'online') buildLobbySlots();
+            if (config.playersMode === 'online' && lobbyState.roomCreated) {
+                buildLobbySlots();
+            }
+            refreshMenuFlow();
         });
     });
 
-    document.querySelectorAll('.players-btn').forEach(btn => {
+    document.querySelectorAll('.room-fmt-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('.players-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            config.playersMode = btn.dataset.players;
-            syncLobbyVisibility();
-        });
-    });
-
-    document.querySelectorAll('.diff-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            config.difficulty = btn.dataset.diff;
+            const fmt = btn.dataset.roomFormat;
+            config.format = fmt;
+            if (lobbyState.roomCreated) {
+                buildLobbySlots();
+            }
+            refreshMenuFlow();
+            document.getElementById('lobby-status-msg').textContent = `Seçili oda formatı: ${fmt.toUpperCase()}. Şimdi Yeni Oda'ya basabilirsiniz.`;
         });
     });
 
     document.getElementById('btn-create-room').addEventListener('click', () => {
+        const chosenFmt = config.format || '1v1';
+        config.format = chosenFmt;
+        config.bots = { blue: 0, red: 0 };
+        config.botDifficulties = [];
+        lobbyState.slots = [];
         buildLobbySlots(generateRoomCode());
-        document.getElementById('lobby-status-msg').textContent = `Yeni oda oluşturuldu: ${lobbyState.roomCode}`;
+        refreshMenuFlow();
+        document.getElementById('lobby-status-msg').textContent = `${chosenFmt.toUpperCase()} odası boş slotlarla kuruldu (${lobbyState.roomCode}). İstediğiniz yere "+ Bot Ekle" ile bot ekleyebilir, üzerine tıklayarak çıkarabilirsiniz.`;
+    });
+
+    document.getElementById('btn-leave-room').addEventListener('click', () => {
+        lobbyState.roomCreated = false;
+        lobbyState.slots = [];
+        config.bots = { blue: 0, red: 0 };
+        config.botDifficulties = [];
+        renderLobby();
+        refreshMenuFlow();
+        document.getElementById('lobby-status-msg').textContent = 'Odadan ayrıldınız. Format seçip Yeni Oda kurabilir veya kod ile katılabilirsiniz.';
     });
 
     document.getElementById('btn-join-room').addEventListener('click', () => {
@@ -2285,35 +2616,43 @@
             document.getElementById('lobby-status-msg').textContent = 'Lütfen en az 3 karakterlik bir oda kodu girin.';
             return;
         }
+        if (!config.format) {
+            config.format = '1v1';
+        }
         buildLobbySlots(code);
+        refreshMenuFlow();
         document.getElementById('lobby-status-msg').textContent = `${code} odasına bağlanıldı!`;
     });
 
     document.getElementById('btn-quick-match').addEventListener('click', () => {
+        if (!config.format) {
+            config.format = '1v1';
+        }
         buildLobbySlots(generateRoomCode());
+        refreshMenuFlow();
         document.getElementById('lobby-status-msg').textContent = `Eşleşme bulundu! Oda: ${lobbyState.roomCode}`;
     });
 
-    document.getElementById('btn-fill-bots').addEventListener('click', () => {
-        buildLobbySlots();
-        document.getElementById('lobby-status-msg').textContent = 'Boş slotlar akıllı botlarla dolduruldu!';
-    });
-
     document.getElementById('player-nick').addEventListener('input', () => {
-        if (config.playersMode === 'online') buildLobbySlots();
+        if (config.playersMode === 'online' && lobbyState.roomCreated) buildLobbySlots();
     });
 
     document.querySelectorAll('.emoji-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const human = state.players.find(p => p.isHuman && p.isAlive);
-            if (human) {
-                spawnFloatingText(human.x, human.y - 125, btn.dataset.emoji, '#ffffff');
-            }
+            if (human) spawnFloatingText(human.x, human.y - 125, btn.dataset.emoji, '#ffffff');
         });
     });
 
     document.getElementById('btn-start').addEventListener('click', startMatch);
-    document.getElementById('btn-rematch').addEventListener('click', startMatch);
+    document.getElementById('btn-rematch').addEventListener('click', () => {
+        enterMobileMatchImmersion();
+        startMatch();
+    });
+    const retryLandscapeBtn = document.getElementById('btn-retry-landscape');
+    if (retryLandscapeBtn) {
+        retryLandscapeBtn.addEventListener('click', enterMobileMatchImmersion);
+    }
 
     document.getElementById('btn-mute').addEventListener('click', () => {
         const muted = sfx.toggleMute();
@@ -2321,18 +2660,22 @@
     });
 
     function returnToMenu() {
+        setPadEditMode(false);
+        exitMobileMatchImmersion();
         state.screen = 'menu';
         hideBanner();
         document.getElementById('hud').classList.add('hidden');
         document.getElementById('gameover-modal').classList.add('hidden');
         document.getElementById('main-menu').classList.remove('hidden');
         syncTouchVisibility();
+        refreshMenuFlow();
     }
 
     document.getElementById('btn-menu-exit').addEventListener('click', returnToMenu);
     document.getElementById('btn-back-menu').addEventListener('click', returnToMenu);
 
     window.onload = function () {
+        refreshMenuFlow();
         lastTime = performance.now();
         requestAnimationFrame(gameLoop);
     };
