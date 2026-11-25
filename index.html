@@ -196,20 +196,22 @@
             <button id="btn-done-touch-layout" type="button" class="px-2.5 py-0.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[11px] font-black cursor-pointer">Tamam ✓</button>
         </div>
 
-        <div id="touch-move-cluster" class="pointer-events-auto fixed bottom-2.5 sm:bottom-4 left-2.5 sm:left-4 flex items-center gap-1.5 sm:gap-2.5">
-            <button id="t-left" type="button" class="touch-pad-btn w-12 h-12 sm:w-18 sm:h-18 rounded-xl sm:rounded-2xl text-white text-xl sm:text-3xl font-black flex items-center justify-center">◀</button>
-            <button id="t-right" type="button" class="touch-pad-btn w-12 h-12 sm:w-18 sm:h-18 rounded-xl sm:rounded-2xl text-white text-xl sm:text-3xl font-black flex items-center justify-center">▶</button>
-            <button id="t-duck" type="button" class="touch-pad-btn w-12 h-12 sm:w-18 sm:h-18 rounded-xl sm:rounded-2xl text-white flex flex-col items-center justify-center">
-                <span class="text-base sm:text-2xl leading-none">🔽</span>
-                <span class="text-[9px] sm:text-[11px] font-extrabold mt-0.5">EĞİL</span>
-            </button>
+        <div id="touch-move-cluster" class="pointer-events-auto fixed bottom-2.5 sm:bottom-4 left-2.5 sm:left-4 flex flex-col items-center gap-1.5 sm:gap-2">
             <button id="t-jump" type="button" class="touch-pad-btn w-12 h-12 sm:w-18 sm:h-18 rounded-xl sm:rounded-2xl text-white flex flex-col items-center justify-center">
                 <span class="text-base sm:text-2xl leading-none">🔼</span>
                 <span class="text-[9px] sm:text-[11px] font-extrabold mt-0.5">ZIPLA</span>
             </button>
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <button id="t-left" type="button" class="touch-pad-btn w-12 h-12 sm:w-18 sm:h-18 rounded-xl sm:rounded-2xl text-white text-xl sm:text-3xl font-black flex items-center justify-center">◀</button>
+                <button id="t-duck" type="button" class="touch-pad-btn w-12 h-12 sm:w-18 sm:h-18 rounded-xl sm:rounded-2xl text-white flex flex-col items-center justify-center">
+                    <span class="text-base sm:text-2xl leading-none">🔽</span>
+                    <span class="text-[9px] sm:text-[11px] font-extrabold mt-0.5">EĞİL</span>
+                </button>
+                <button id="t-right" type="button" class="touch-pad-btn w-12 h-12 sm:w-18 sm:h-18 rounded-xl sm:rounded-2xl text-white text-xl sm:text-3xl font-black flex items-center justify-center">▶</button>
+            </div>
         </div>
 
-        <div id="touch-aim-cluster" class="pointer-events-auto fixed bottom-2.5 sm:bottom-4 right-2.5 sm:right-4 flex items-end gap-2">
+        <div id="touch-aim-cluster" class="pointer-events-auto fixed bottom-3 sm:bottom-5 right-3 sm:right-6 flex items-end gap-2">
             <button id="t-aim-pad" type="button" class="touch-pad-btn relative w-20 h-20 sm:w-28 sm:h-28 rounded-full bg-gradient-to-b from-sky-500/80 to-blue-700/85 border-3 sm:border-4 border-white/90 shadow-[0_0_20px_rgba(56,189,248,0.65)] flex flex-col items-center justify-center text-white cursor-pointer">
                 <span class="text-xl sm:text-2xl leading-none pointer-events-none">❄️</span>
                 <span class="text-[11px] sm:text-xs font-black tracking-wide mt-1 pointer-events-none">AT</span>
@@ -1365,7 +1367,6 @@
 
             ctx.restore();
 
-            // At tuşuna basılı tutulduğunda veya nişan alındığında kesik çizgiyle atış ekseni
             if (this.isHuman && (this.charging || aimInput.mouseActive)) {
                 const hb = this.getHitbox();
                 const originX = 0;
