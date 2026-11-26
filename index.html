@@ -38,6 +38,15 @@
             height: 100dvh;
             touch-action: none;
         }
+        #gameCanvas {
+            position: fixed;
+            inset: 0;
+            z-index: 5;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            pointer-events: none;
+        }
         .arcade-panel {
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(224, 242, 254, 0.97) 100%);
             border: 4px solid #38bdf8;
@@ -135,61 +144,63 @@
         </button>
     </div>
 
-    <!-- ÜST BİLGİ ÇUBUĞU (HUD) -->
-    <div id="hud" class="hidden fixed top-0 left-0 right-0 z-20 pointer-events-none px-2 sm:px-6 pt-1.5 sm:pt-2.5 flex items-start justify-between gap-1.5">
-        <!-- Mavi Takım -->
-        <div class="flex items-center gap-2 bg-gradient-to-r from-blue-950/92 to-blue-900/85 border-2 border-blue-400 rounded-2xl px-2 sm:px-3 py-1 sm:py-1.5 shadow-xl shrink-0">
-            <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-blue-600 border-2 border-white flex items-center justify-center text-base sm:text-xl shadow-inner">
-                🧢
-            </div>
-            <div class="flex flex-col">
-                <div class="flex items-center justify-between gap-2">
-                    <span class="text-blue-200 font-extrabold text-[11px] sm:text-sm tracking-wide">MAVİ TAKIM</span>
-                    <div id="blue-stars" class="flex gap-0.5 text-xs sm:text-sm"></div>
+    <!-- ÜST BİLGİ ÇUBUĞU (HUD) - Simetrik & Kompakt Hizalı -->
+    <div id="hud" class="hidden fixed top-0 left-0 right-0 z-20 pointer-events-none px-2 sm:px-5 pt-1.5 sm:pt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-1.5 sm:gap-3">
+        <!-- Sol: Mavi Takım -->
+        <div class="flex items-center justify-start">
+            <div class="flex items-center gap-1.5 sm:gap-2 bg-gradient-to-r from-blue-950/92 to-blue-900/85 border-2 border-blue-400 rounded-xl sm:rounded-2xl px-2 sm:px-2.5 py-1 shadow-lg">
+                <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-blue-600 border border-white flex items-center justify-center text-xs sm:text-base shadow-inner shrink-0">
+                    🧢
                 </div>
-                <div id="blue-hp-bars" class="flex flex-col gap-1 mt-1 w-20 sm:w-44"></div>
+                <div class="flex flex-col w-20 sm:w-32">
+                    <div class="flex items-center justify-between gap-1">
+                        <span class="text-blue-200 font-extrabold text-[9px] sm:text-xs tracking-wide truncate">MAVİ TAKIM</span>
+                        <div id="blue-stars" class="flex gap-0.5 text-[10px] sm:text-xs leading-none shrink-0"></div>
+                    </div>
+                    <div id="blue-hp-bars" class="flex flex-col gap-0.5 mt-0.5 w-full"></div>
+                </div>
             </div>
         </div>
 
-        <!-- Orta Skor, Sayaç ve Emoji Barı -->
-        <div class="flex flex-col items-center shrink-0">
-            <div class="flex items-center gap-2 sm:gap-3 bg-slate-900/92 border-2 border-amber-400 rounded-2xl px-2.5 sm:px-4 py-0.5 sm:py-1 shadow-2xl">
-                <span id="hud-blue-score" class="text-sky-400 text-lg sm:text-2xl font-black">0</span>
-                <span class="text-slate-500 text-xs sm:text-sm">-</span>
-                <span id="hud-timer" class="text-amber-300 font-mono text-sm sm:text-xl bg-slate-800 px-2 py-0.5 rounded-lg border border-slate-700">60</span>
-                <span class="text-slate-500 text-xs sm:text-sm">-</span>
-                <span id="hud-red-score" class="text-rose-400 text-lg sm:text-2xl font-black">0</span>
+        <!-- Orta: Skor, Sayaç ve Emoji Barı -->
+        <div class="flex flex-col items-center justify-center shrink-0">
+            <div class="flex items-center gap-1.5 sm:gap-2.5 bg-slate-900/92 border-2 border-amber-400 rounded-xl sm:rounded-2xl px-2.5 sm:px-3.5 py-0.5 shadow-xl">
+                <span id="hud-blue-score" class="text-sky-400 text-base sm:text-xl font-black leading-none">0</span>
+                <span class="text-slate-500 text-[10px] sm:text-xs">-</span>
+                <span id="hud-timer" class="text-amber-300 font-mono text-xs sm:text-base bg-slate-800 px-1.5 py-0.5 rounded-md border border-slate-700 leading-none">60</span>
+                <span class="text-slate-500 text-[10px] sm:text-xs">-</span>
+                <span id="hud-red-score" class="text-rose-400 text-base sm:text-xl font-black leading-none">0</span>
             </div>
-            <div id="hud-round-text" class="text-[9px] sm:text-xs font-bold text-sky-100 bg-slate-900/80 px-2 py-0.5 rounded-full mt-0.5 tracking-wider">
+            <div id="hud-round-text" class="text-[8px] sm:text-[10px] font-bold text-sky-100 bg-slate-900/80 px-2 py-0.5 rounded-full mt-0.5 tracking-wider leading-none">
                 1. TUR • HEDEF: 3
             </div>
             <div class="pointer-events-auto flex items-center gap-1 mt-0.5 bg-slate-900/80 border border-white/20 rounded-full px-1.5 py-0.5">
-                <button type="button" data-emoji="❄️" class="emoji-btn text-xs sm:text-sm hover:scale-125 transition cursor-pointer px-0.5">❄️</button>
-                <button type="button" data-emoji="🎯" class="emoji-btn text-xs sm:text-sm hover:scale-125 transition cursor-pointer px-0.5">🎯</button>
-                <button type="button" data-emoji="😂" class="emoji-btn text-xs sm:text-sm hover:scale-125 transition cursor-pointer px-0.5">😂</button>
-                <button type="button" data-emoji="🔥" class="emoji-btn text-xs sm:text-sm hover:scale-125 transition cursor-pointer px-0.5">🔥</button>
+                <button type="button" data-emoji="❄️" class="emoji-btn text-[11px] sm:text-xs hover:scale-125 transition cursor-pointer px-0.5 leading-none">❄️</button>
+                <button type="button" data-emoji="🎯" class="emoji-btn text-[11px] sm:text-xs hover:scale-125 transition cursor-pointer px-0.5 leading-none">🎯</button>
+                <button type="button" data-emoji="😂" class="emoji-btn text-[11px] sm:text-xs hover:scale-125 transition cursor-pointer px-0.5 leading-none">😂</button>
+                <button type="button" data-emoji="🔥" class="emoji-btn text-[11px] sm:text-xs hover:scale-125 transition cursor-pointer px-0.5 leading-none">🔥</button>
             </div>
         </div>
 
-        <!-- Kırmızı Takım + Ses / Menü -->
-        <div class="flex items-center gap-1.5 shrink-0">
-            <div class="flex items-center gap-2 bg-gradient-to-l from-red-950/92 to-red-900/85 border-2 border-red-400 rounded-2xl px-2 sm:px-3 py-1 sm:py-1.5 shadow-xl">
-                <div class="flex flex-col items-end">
-                    <div class="flex items-center justify-between gap-2 w-full">
-                        <div id="red-stars" class="flex gap-0.5 text-xs sm:text-sm"></div>
-                        <span class="text-red-200 font-extrabold text-[11px] sm:text-sm tracking-wide">KIRMIZI TAKIM</span>
+        <!-- Sağ: Kırmızı Takım + Hızlı Aksiyonlar -->
+        <div class="flex items-center justify-end gap-1.5">
+            <div class="flex items-center gap-1.5 sm:gap-2 bg-gradient-to-l from-red-950/92 to-red-900/85 border-2 border-red-400 rounded-xl sm:rounded-2xl px-2 sm:px-2.5 py-1 shadow-lg">
+                <div class="flex flex-col items-end w-20 sm:w-32">
+                    <div class="flex items-center justify-between gap-1 w-full">
+                        <div id="red-stars" class="flex gap-0.5 text-[10px] sm:text-xs leading-none shrink-0"></div>
+                        <span class="text-red-200 font-extrabold text-[9px] sm:text-xs tracking-wide truncate">KIRMIZI TAKIM</span>
                     </div>
-                    <div id="red-hp-bars" class="flex flex-col gap-1 mt-1 w-20 sm:w-44"></div>
+                    <div id="red-hp-bars" class="flex flex-col gap-0.5 mt-0.5 w-full"></div>
                 </div>
-                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-red-600 border-2 border-white flex items-center justify-center text-base sm:text-xl shadow-inner">
+                <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-red-600 border border-white flex items-center justify-center text-xs sm:text-base shadow-inner shrink-0">
                     🧣
                 </div>
             </div>
 
-            <div class="pointer-events-auto flex flex-col gap-1">
-                <button id="btn-ingame-pad-editor" type="button" title="Tuş Yerlerini Düzenle" class="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-amber-500/90 hover:bg-amber-400 border-2 border-amber-200 text-slate-950 flex items-center justify-center text-[11px] sm:text-xs font-black shadow cursor-pointer">✋</button>
-                <button id="btn-mute" type="button" title="Ses Aç/Kapat" class="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-slate-800/90 hover:bg-slate-700 border-2 border-slate-500 text-white flex items-center justify-center text-xs sm:text-base shadow cursor-pointer">🔊</button>
-                <button id="btn-menu-exit" type="button" title="Ana Menü" class="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-slate-800/90 hover:bg-slate-700 border-2 border-slate-500 text-white flex items-center justify-center text-[11px] sm:text-xs font-bold shadow cursor-pointer">🏠</button>
+            <div class="pointer-events-auto flex items-center gap-1">
+                <button id="btn-ingame-pad-editor" type="button" title="Tuş Yerlerini Düzenle" class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-amber-500/90 hover:bg-amber-400 border border-amber-200 text-slate-950 flex items-center justify-center text-[10px] sm:text-xs font-black shadow cursor-pointer">✋</button>
+                <button id="btn-mute" type="button" title="Ses Aç/Kapat" class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-slate-800/90 hover:bg-slate-700 border border-slate-500 text-white flex items-center justify-center text-[10px] sm:text-xs shadow cursor-pointer">🔊</button>
+                <button id="btn-menu-exit" type="button" title="Ana Menü" class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-slate-800/90 hover:bg-slate-700 border border-slate-500 text-white flex items-center justify-center text-[10px] sm:text-xs font-bold shadow cursor-pointer">🏠</button>
             </div>
         </div>
     </div>
@@ -562,7 +573,7 @@
     const sfx = new SoundEffects();
 
     const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas ? canvas.getContext('2d') : null;
 
     const WORLD_W = 1600;
     const WORLD_H = 720;
@@ -627,20 +638,24 @@
     }
 
     function resizeCanvas() {
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
         const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
         const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-        canvas.width = Math.max(1, Math.round(vw));
-        canvas.height = Math.max(1, Math.round(vh));
-        scaleX = canvas.width / WORLD_W;
-        const minFitScaleY = canvas.height / WORLD_H;
-        const isLandscapePhone = canvas.width > canvas.height && canvas.height < 520;
+        const w = Math.max(1, Math.round(rect.width || vw || window.innerWidth || WORLD_W));
+        const h = Math.max(1, Math.round(rect.height || vh || window.innerHeight || WORLD_H));
+        canvas.width = w;
+        canvas.height = h;
+        scaleX = w / WORLD_W;
+        const minFitScaleY = h / WORLD_H;
+        const isLandscapePhone = w > h && h < 520;
         if (isLandscapePhone) {
             scaleY = Math.max(scaleX * 0.92, minFitScaleY);
-            const visibleWorldH = canvas.height / scaleY;
+            const visibleWorldH = h / scaleY;
             const idealBottom = GROUND_Y + 75;
             viewOffsetY = clamp(idealBottom - visibleWorldH, 0, Math.max(0, WORLD_H - visibleWorldH));
         } else {
-            scaleY = canvas.height / WORLD_H;
+            scaleY = h / WORLD_H;
             viewOffsetY = 0;
         }
     }
@@ -758,7 +773,7 @@
             this.sweepDir = 1;
             this.charge = 0.68;
             this.aimAngle = team === 'blue' ? -0.35 : -(Math.PI - 0.35);
-            this.cooldown = 0.6;
+            this.cooldown = 0.60;
 
             this.campTimer = 0;
             this.icicleSpawnCooldown = 0;
@@ -774,7 +789,7 @@
 
             this.ai = {
                 decisionTimer: rand(0.65, 1.15),
-                shootTimer: rand(1.1, 2.0),
+                shootTimer: rand(0.85, 1.45),
                 targetX: x,
                 wantCharge: 0.62,
                 wantAngle: this.aimAngle
@@ -803,14 +818,14 @@
             this.sweepDir = 1;
             this.charge = 0.68;
             this.aimAngle = this.team === 'blue' ? -0.35 : -(Math.PI - 0.35);
-            this.cooldown = 0.65;
+            this.cooldown = 0.60;
             this.campTimer = 0;
             this.icicleSpawnCooldown = 0;
             this.hurtTimer = 0;
             this.laughTimer = 0;
             this.gigglePhase = rand(0, Math.PI * 2);
             this.ai.decisionTimer = rand(0.65, 1.15);
-            this.ai.shootTimer = rand(1.2, 2.1);
+            this.ai.shootTimer = rand(0.85, 1.45);
         }
 
         get isAlive() { return this.hp > 0; }
@@ -1010,7 +1025,7 @@
                 if (this.rapidTimer > 0 && stillHolding) {
                     if (this.cooldown <= 0) {
                         this.fireSnowball();
-                        this.cooldown = 0.18;
+                        this.cooldown = 0.28;
                     }
                 } else if (this.charging && (!stillHolding || aimInput.touchReleasePending)) {
                     aimInput.touchReleasePending = false;
@@ -1025,7 +1040,7 @@
                 if (this.rapidTimer > 0) {
                     if (keyThrowHeld && this.cooldown <= 0) {
                         this.fireSnowball();
-                        this.cooldown = 0.34;
+                        this.cooldown = 0.28;
                     }
                 } else if (keyThrowHeld && this.cooldown <= 0) {
                     this.fireSnowball();
@@ -1036,10 +1051,10 @@
         thinkAI(dt) {
             const diffKey = this.aiDifficulty || config.difficulty || 'medium';
             const diffCfg = {
-                easy:   { react: 1.05, dodgeDist: 155, accuracy: 0.24, shotMin: 1.85, shotMax: 2.95 },
-                medium: { react: 0.72, dodgeDist: 220, accuracy: 0.12, shotMin: 1.25, shotMax: 2.15 },
-                hard:   { react: 0.48, dodgeDist: 295, accuracy: 0.05, shotMin: 0.90, shotMax: 1.55 }
-            }[diffKey] || { react: 0.72, dodgeDist: 220, accuracy: 0.12, shotMin: 1.25, shotMax: 2.15 };
+                easy:   { react: 1.05, dodgeDist: 155, accuracy: 0.24, shotMin: 1.25, shotMax: 1.95 },
+                medium: { react: 0.72, dodgeDist: 220, accuracy: 0.12, shotMin: 0.85, shotMax: 1.45 },
+                hard:   { react: 0.48, dodgeDist: 295, accuracy: 0.05, shotMin: 0.65, shotMax: 1.15 }
+            }[diffKey] || { react: 0.72, dodgeDist: 220, accuracy: 0.12, shotMin: 0.85, shotMax: 1.45 };
 
             let wantJump = false;
             let wantDuck = false;
@@ -1122,9 +1137,8 @@
             });
 
             this.stats.throws++;
-            this.cooldown = this.isHuman
-                ? (this.rapidTimer > 0 ? 0.18 : 0.28)
-                : (this.rapidTimer > 0 ? 0.42 : 0.95);
+            // Hem insan hem botlar için normal atış bekleme süresi 0.60 sn
+            this.cooldown = this.rapidTimer > 0 ? 0.28 : 0.60;
             this.scaleX = 1.18;
             this.scaleY = 0.86;
             sfx.playThrow(isMega ? 1 : this.charge);
@@ -1182,7 +1196,6 @@
             const isBlue = this.team === 'blue';
             const dir = Math.cos(this.aimAngle) >= 0 ? 1 : -1;
             const isLaughing = this.laughTimer > 0;
-            // Kıs kıs gülme: yana sallanma yerine omuz/gövdenin minik ritimlerle aşağı-yukarı titremesi
             const giggleOffsetY = isLaughing ? Math.sin(this.gigglePhase) * 2.4 : 0;
             const animT = performance.now() * 0.008 + this.id * 1.3;
 
@@ -1653,7 +1666,6 @@
 
             ctx.restore();
 
-            // Eldivenli el (omuz/gövde titremesiyle uyumlu mikro hareket)
             const armBob = isLaughing
                 ? Math.sin(this.gigglePhase) * 2.5
                 : Math.sin(animT * 1.6) * 3.5;
@@ -2324,13 +2336,13 @@
         const blueBars = document.getElementById('blue-hp-bars');
         const redBars = document.getElementById('red-hp-bars');
         blueBars.innerHTML = state.players.filter(p => p.team === 'blue').map(p => `
-            <div class="w-full h-2.5 bg-slate-900/80 rounded-full overflow-hidden border border-blue-300/40">
+            <div class="w-full h-1.5 sm:h-2 bg-slate-900/80 rounded-full overflow-hidden border border-blue-300/40">
                 <div class="h-full bg-gradient-to-r from-sky-400 to-emerald-400 transition-all duration-150" style="width:${(p.hp / p.maxHp) * 100}%"></div>
             </div>
         `).join('');
 
         redBars.innerHTML = state.players.filter(p => p.team === 'red').map(p => `
-            <div class="w-full h-2.5 bg-slate-900/80 rounded-full overflow-hidden border border-red-300/40">
+            <div class="w-full h-1.5 sm:h-2 bg-slate-900/80 rounded-full overflow-hidden border border-red-300/40">
                 <div class="h-full bg-gradient-to-l from-amber-400 to-rose-500 transition-all duration-150 ml-auto" style="width:${(p.hp / p.maxHp) * 100}%"></div>
             </div>
         `).join('');
@@ -2643,7 +2655,12 @@
     }
 
     function render() {
+        if (!canvas || !ctx) return;
+        if (canvas.width <= 1 || canvas.height <= 1) {
+            resizeCanvas();
+        }
         ctx.save();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.scale(scaleX, scaleY);
         if (viewOffsetY > 0) {
             ctx.translate(0, -viewOffsetY);
@@ -2662,10 +2679,14 @@
 
     let lastTime = performance.now();
     function gameLoop(now) {
-        const dt = Math.min(0.05, (now - lastTime) / 1000);
-        lastTime = now;
-        update(dt);
-        render();
+        try {
+            const dt = Math.min(0.05, (now - lastTime) / 1000);
+            lastTime = now;
+            update(dt);
+            render();
+        } catch (err) {
+            console.error('Oyun döngüsü hatası:', err);
+        }
         requestAnimationFrame(gameLoop);
     }
 
@@ -2678,119 +2699,95 @@
     window.addEventListener('keyup', e => { keys[e.code] = false; });
 
     function clientToWorld(clientX, clientY) {
-        const rect = canvas.getBoundingClientRect();
+        const rect = canvas ? canvas.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
         return {
             wx: ((clientX - rect.left) / Math.max(1, rect.width)) * WORLD_W,
-            wy: (((clientY - rect.top) / Math.max(1, rect.height)) * (canvas.height / scaleY)) + viewOffsetY
+            wy: (((clientY - rect.top) / Math.max(1, rect.height)) * (canvas.height / Math.max(0.01, scaleY))) + viewOffsetY
         };
     }
 
-    canvas.addEventListener('mousemove', e => {
-        const { wx, wy } = clientToWorld(e.clientX, e.clientY);
-        aimInput.mouseWorldX = wx;
-        aimInput.mouseWorldY = wy;
-        aimInput.mouseActive = true;
-    });
+    if (canvas) {
+        canvas.addEventListener('mousemove', e => {
+            const { wx, wy } = clientToWorld(e.clientX, e.clientY);
+            aimInput.mouseWorldX = wx;
+            aimInput.mouseWorldY = wy;
+            aimInput.mouseActive = true;
+        });
 
-    canvas.addEventListener('mousedown', e => {
-        if (e.button !== 0 || state.screen !== 'playing') return;
-        sfx.init();
-        const { wx, wy } = clientToWorld(e.clientX, e.clientY);
-        aimInput.mouseWorldX = wx;
-        aimInput.mouseWorldY = wy;
-        aimInput.mouseActive = true;
-        aimInput.mouseCharging = true;
-    });
+        canvas.addEventListener('mousedown', e => {
+            if (e.button !== 0 || state.screen !== 'playing') return;
+            sfx.init();
+            const { wx, wy } = clientToWorld(e.clientX, e.clientY);
+            aimInput.mouseWorldX = wx;
+            aimInput.mouseWorldY = wy;
+            aimInput.mouseActive = true;
+            aimInput.mouseCharging = true;
+        });
+    }
 
     window.addEventListener('mouseup', e => {
-        if (e.button !== 0) return;
-        if (aimInput.mouseCharging && state.screen === 'playing') {
-            const p1 = state.players.find(p => p.isHuman && p.isAlive);
-            if (p1 && p1.charging && p1.cooldown <= 0) {
-                p1.fireSnowball();
-                p1.charging = false;
-            }
-        }
-        aimInput.mouseCharging = false;
+        if (e.button === 0) aimInput.mouseCharging = false;
     });
 
     function bindTouchButton(id, prop) {
         const el = document.getElementById(id);
-        let draggingPad = false;
+        let dragging = false;
         let dragOffset = { x: 0, y: 0 };
 
         const startDrag = (clientX, clientY) => {
-            if (!config.touchLayoutEditing) return false;
-            draggingPad = true;
+            dragging = true;
             const rect = el.getBoundingClientRect();
             dragOffset = { x: clientX - rect.left, y: clientY - rect.top };
             el.style.position = 'fixed';
+            el.style.left = `${rect.left}px`;
+            el.style.top = `${rect.top}px`;
             el.style.right = 'auto';
             el.style.bottom = 'auto';
             el.style.zIndex = '40';
-            return true;
         };
 
         const moveDrag = (clientX, clientY) => {
-            if (!draggingPad) return false;
+            if (!dragging) return;
             const maxX = Math.max(0, window.innerWidth - el.offsetWidth);
             const maxY = Math.max(0, window.innerHeight - el.offsetHeight);
-            const nx = clamp(clientX - dragOffset.x, 0, maxX);
-            const ny = clamp(clientY - dragOffset.y, 0, maxY);
-            el.style.left = `${nx}px`;
-            el.style.top = `${ny}px`;
-            return true;
+            el.style.left = `${clamp(clientX - dragOffset.x, 0, maxX)}px`;
+            el.style.top = `${clamp(clientY - dragOffset.y, 0, maxY)}px`;
         };
 
-        const stopDrag = () => {
-            if (!draggingPad) return false;
-            draggingPad = false;
-            return true;
-        };
+        const endDrag = () => { dragging = false; };
 
-        const press = (e) => {
+        const onDown = (e) => {
+            e.preventDefault();
             if (config.touchLayoutEditing) {
-                e.preventDefault();
-                const pt = e.touches && e.touches[0] ? e.touches[0] : e;
+                const pt = e.touches ? e.touches[0] : e;
                 startDrag(pt.clientX, pt.clientY);
                 return;
             }
-            e.preventDefault();
             sfx.init();
             touchState[prop] = true;
             el.classList.add('pressed');
         };
-
-        const move = (e) => {
-            if (!draggingPad) return;
+        const onUp = (e) => {
             e.preventDefault();
-            const pt = e.touches && e.touches[0] ? e.touches[0] : e;
-            moveDrag(pt.clientX, pt.clientY);
-        };
-
-        const release = (e) => {
-            if (stopDrag()) {
-                e.preventDefault();
+            if (dragging) {
+                endDrag();
                 return;
             }
-            e.preventDefault();
             touchState[prop] = false;
             el.classList.remove('pressed');
         };
-
-        el.addEventListener('touchstart', press, { passive: false });
-        el.addEventListener('touchmove', move, { passive: false });
-        el.addEventListener('touchend', release);
-        el.addEventListener('touchcancel', release);
-        el.addEventListener('mousedown', press);
-        window.addEventListener('mousemove', move);
-        window.addEventListener('mouseup', release);
-        el.addEventListener('mouseleave', () => {
-            if (!config.touchLayoutEditing) {
-                touchState[prop] = false;
-                el.classList.remove('pressed');
-            }
-        });
+        el.addEventListener('touchstart', onDown, { passive: false });
+        el.addEventListener('touchmove', e => {
+            if (!dragging) return;
+            e.preventDefault();
+            const pt = e.touches[0];
+            moveDrag(pt.clientX, pt.clientY);
+        }, { passive: false });
+        el.addEventListener('touchend', onUp);
+        el.addEventListener('touchcancel', onUp);
+        el.addEventListener('mousedown', onDown);
+        window.addEventListener('mousemove', e => moveDrag(e.clientX, e.clientY));
+        window.addEventListener('mouseup', onUp);
     }
     bindTouchButton('t-left', 'left');
     bindTouchButton('t-right', 'right');
@@ -3111,10 +3108,12 @@
     document.getElementById('btn-back-menu').addEventListener('click', returnToMenu);
 
     window.onload = function () {
+        resizeCanvas();
         refreshMenuFlow();
         lastTime = performance.now();
         requestAnimationFrame(gameLoop);
     };
+    requestAnimationFrame(gameLoop);
     </script>
 </body>
 </html>
