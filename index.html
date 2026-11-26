@@ -122,12 +122,57 @@
             outline-offset: 2px;
             cursor: grab;
         }
+        #banner-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 35;
+            pointer-events: none;
+            align-items: center;
+            justify-content: center;
+        }
+        #banner-overlay:not(.hidden) {
+            display: flex;
+        }
+        #gameover-modal:not(.hidden) {
+            display: flex;
+        }
         #portrait-warning {
             display: none;
         }
         @media screen and (orientation: portrait) and (max-width: 768px) {
             body.match-active #portrait-warning {
                 display: flex;
+            }
+        }
+        @media screen and (max-height: 500px) {
+            #gameover-card {
+                padding: 0.65rem 1rem !important;
+                max-width: 92vw !important;
+            }
+            #gameover-trophy {
+                display: none !important;
+            }
+            #winner-title {
+                font-size: 1.25rem !important;
+                line-height: 1.3 !important;
+                margin-bottom: 0.15rem !important;
+            }
+            #winner-subtitle {
+                font-size: 0.75rem !important;
+                margin-bottom: 0.45rem !important;
+            }
+            #stats-container {
+                padding: 0.45rem !important;
+                margin-bottom: 0.55rem !important;
+                max-height: 36dvh;
+                overflow-y: auto;
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 0.35rem !important;
+            }
+            #gameover-actions button {
+                padding: 0.45rem 1rem !important;
+                font-size: 0.85rem !important;
             }
         }
     </style>
@@ -206,9 +251,9 @@
     </div>
 
     <!-- Tur / Sonuç Duyuru Bannerı -->
-    <div id="banner-overlay" class="hidden fixed inset-0 z-25 pointer-events-none flex items-center justify-center">
-        <div class="bg-slate-900/92 border-4 border-amber-400 rounded-3xl px-8 py-5 text-center shadow-[0_0_45px_rgba(251,191,36,0.45)]">
-            <h2 id="banner-title" class="text-3xl sm:text-5xl font-black text-amber-300 drop-shadow mb-1">1. TUR BAŞLIYOR!</h2>
+    <div id="banner-overlay" class="hidden fixed inset-0 z-35 pointer-events-none flex items-center justify-center p-4">
+        <div id="banner-card" class="bg-slate-900/95 border-4 border-amber-400 rounded-3xl px-8 py-5 text-center shadow-[0_0_50px_rgba(251,191,36,0.55)] max-w-xl w-full">
+            <h2 id="banner-title" class="text-2xl sm:text-4xl font-black text-amber-300 drop-shadow mb-1.5">1. TUR BAŞLIYOR!</h2>
             <p id="banner-subtitle" class="text-white text-sm sm:text-lg font-bold">Zıpla, Eğil ve Kartopunu Fırlat!</p>
         </div>
     </div>
@@ -398,19 +443,21 @@
     </div>
 
     <!-- MAÇ SONU EKRANI -->
-    <div id="gameover-modal" class="hidden fixed inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
-        <div class="arcade-panel rounded-3xl max-w-lg w-full p-6 text-center">
-            <div class="text-6xl mb-2">🏆</div>
-            <h2 id="winner-title" class="text-3xl sm:text-4xl font-black text-blue-700 mb-1">MAVİ TAKIM KAZANDI!</h2>
-            <p id="winner-subtitle" class="text-slate-600 font-bold text-sm mb-5">Skor: 3 - 1</p>
+    <div id="gameover-modal" class="hidden fixed inset-0 z-40 flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto">
+        <div id="gameover-card" class="arcade-panel rounded-3xl max-w-lg w-full p-4 sm:p-6 text-center my-auto max-h-[94dvh] flex flex-col justify-between">
+            <div>
+                <div id="gameover-trophy" class="text-4xl sm:text-5xl mb-1">🏆</div>
+                <h2 id="winner-title" class="text-2xl sm:text-3xl font-black text-blue-700 mb-0.5">MAVİ TAKIM KAZANDI!</h2>
+                <p id="winner-subtitle" class="text-slate-600 font-bold text-xs sm:text-sm mb-3">Skor: 3 - 1</p>
+            </div>
 
-            <div id="stats-container" class="bg-white/90 rounded-2xl border-2 border-sky-200 p-4 mb-6 space-y-2 text-left text-sm"></div>
+            <div id="stats-container" class="bg-white/90 rounded-2xl border-2 border-sky-200 p-2.5 sm:p-3 mb-3 space-y-1.5 text-left text-xs sm:text-sm overflow-y-auto"></div>
 
-            <div class="flex items-center justify-center gap-3">
-                <button id="btn-rematch" type="button" class="btn-green bg-gradient-to-r from-emerald-500 to-green-600 text-white font-black px-7 py-3.5 rounded-2xl text-base cursor-pointer">
+            <div id="gameover-actions" class="flex items-center justify-center gap-2.5 shrink-0 pt-0.5">
+                <button id="btn-rematch" type="button" class="btn-green bg-gradient-to-r from-emerald-500 to-green-600 text-white font-black px-5 py-2.5 rounded-2xl text-sm sm:text-base cursor-pointer">
                     🔄 Rövanş Yap
                 </button>
-                <button id="btn-back-menu" type="button" class="btn-arcade bg-gradient-to-r from-sky-500 to-blue-600 text-white font-black px-7 py-3.5 rounded-2xl text-base cursor-pointer">
+                <button id="btn-back-menu" type="button" class="btn-arcade bg-gradient-to-r from-sky-500 to-blue-600 text-white font-black px-5 py-2.5 rounded-2xl text-sm sm:text-base cursor-pointer">
                     🏠 Ana Menü
                 </button>
             </div>
@@ -1137,7 +1184,6 @@
             });
 
             this.stats.throws++;
-            // Hem insan hem botlar için normal atış bekleme süresi 0.60 sn
             this.cooldown = this.rapidTimer > 0 ? 0.28 : 0.60;
             this.scaleX = 1.18;
             this.scaleY = 0.86;
@@ -2239,7 +2285,7 @@
 
         updateHUD();
         state.screen = 'roundIntro';
-        showBanner(`${state.round}. TUR BAŞLIYOR!`, 'AT tuşuna basılı tut, kesik çizgi x\'ten y\'ye ilerlesin, bırakınca fırlat!');
+        showBanner(`${state.round}. TUR BAŞLIYOR!`, 'AT tuşuna basılı tut, kesik çizgi x\'ten y\'ye ilerlesin, bırakınca fırlat!', 'neutral');
 
         setTimeout(() => {
             if (state.screen === 'roundIntro') {
@@ -2273,8 +2319,11 @@
             updateHUD();
             sfx.playCheer();
 
-            const title = winnerTeam === 'blue' ? 'MAVİ TAKIM TURU ALDI!' : 'KIRMIZI TAKIM TURU ALDI!';
-            showBanner(title, `Skor: Mavi ${state.blueScore} - ${state.redScore} Kırmızı`);
+            const title = winnerTeam === 'blue'
+                ? `🏆 ${state.round}. TURU MAVİ TAKIM KAZANDI!`
+                : `🏆 ${state.round}. TURU KIRMIZI TAKIM KAZANDI!`;
+            const reasonText = timeExpired ? 'Süre doldu! ' : '';
+            showBanner(title, `${reasonText}Skor: Mavi ${state.blueScore} - ${state.redScore} Kırmızı`, winnerTeam);
 
             setTimeout(() => {
                 hideBanner();
@@ -2284,7 +2333,7 @@
                     state.round++;
                     setupRound();
                 }
-            }, 2100);
+            }, 2200);
         }
     }
 
@@ -2295,27 +2344,29 @@
 
         const title = document.getElementById('winner-title');
         title.textContent = winnerTeam === 'blue' ? 'MAVİ TAKIM ŞAMPİYON!' : 'KIRMIZI TAKIM ŞAMPİYON!';
-        title.className = `text-3xl sm:text-4xl font-black mb-1 ${winnerTeam === 'blue' ? 'text-blue-700' : 'text-red-600'}`;
+        title.className = `text-2xl sm:text-3xl font-black mb-0.5 ${winnerTeam === 'blue' ? 'text-blue-700' : 'text-red-600'}`;
 
         document.getElementById('winner-subtitle').textContent = `Final Skoru: Mavi ${state.blueScore} - ${state.redScore} Kırmızı`;
 
         document.getElementById('stats-container').innerHTML = state.players.map(p => {
             const badge = p.team === 'blue'
-                ? '<span class="px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-black text-xs">MAVİ</span>'
-                : '<span class="px-2 py-0.5 rounded bg-red-100 text-red-700 font-black text-xs">KIRMIZI</span>';
+                ? '<span class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-black text-[10px] sm:text-xs shrink-0">MAVİ</span>'
+                : '<span class="px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-black text-[10px] sm:text-xs shrink-0">KIRMIZI</span>';
             const acc = p.stats.throws > 0 ? Math.round((p.stats.hits / p.stats.throws) * 100) : 0;
             return `
-                <div class="flex items-center justify-between bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
-                    <div class="flex items-center gap-2">${badge}<span class="font-extrabold text-slate-800">${p.name}</span></div>
-                    <div class="flex items-center gap-3 text-xs font-bold text-slate-600">
-                        <span>🎯 İsabet: <b>%${acc}</b></span>
-                        <span>💥 Hasar: <b>${p.stats.damage}</b></span>
+                <div class="flex items-center justify-between gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200">
+                    <div class="flex items-center gap-1.5 min-w-0">${badge}<span class="font-extrabold text-slate-800 truncate text-xs sm:text-sm">${p.name}</span></div>
+                    <div class="flex items-center gap-2 text-[11px] sm:text-xs font-bold text-slate-600 shrink-0">
+                        <span>🎯 <b>%${acc}</b></span>
+                        <span>💥 <b>${p.stats.damage}</b></span>
                     </div>
                 </div>
             `;
         }).join('');
 
-        document.getElementById('gameover-modal').classList.remove('hidden');
+        const modal = document.getElementById('gameover-modal');
+        modal.classList.remove('hidden');
+        modal.scrollTop = 0;
     }
 
     function updateHUD() {
@@ -2348,12 +2399,34 @@
         `).join('');
     }
 
-    function showBanner(title, sub) {
-        document.getElementById('banner-title').textContent = title;
-        document.getElementById('banner-subtitle').textContent = sub;
-        document.getElementById('banner-overlay').classList.remove('hidden');
+    function showBanner(title, sub, tone = 'neutral') {
+        const overlay = document.getElementById('banner-overlay');
+        const card = document.getElementById('banner-card');
+        const titleEl = document.getElementById('banner-title');
+        const subEl = document.getElementById('banner-subtitle');
+
+        titleEl.textContent = title;
+        subEl.textContent = sub;
+
+        if (tone === 'blue') {
+            card.className = 'bg-blue-950/95 border-4 border-sky-400 rounded-3xl px-8 py-5 text-center shadow-[0_0_50px_rgba(56,189,248,0.6)] max-w-xl w-full';
+            titleEl.className = 'text-2xl sm:text-4xl font-black text-sky-300 drop-shadow mb-1.5';
+        } else if (tone === 'red') {
+            card.className = 'bg-red-950/95 border-4 border-rose-400 rounded-3xl px-8 py-5 text-center shadow-[0_0_50px_rgba(251,113,133,0.6)] max-w-xl w-full';
+            titleEl.className = 'text-2xl sm:text-4xl font-black text-rose-300 drop-shadow mb-1.5';
+        } else {
+            card.className = 'bg-slate-900/95 border-4 border-amber-400 rounded-3xl px-8 py-5 text-center shadow-[0_0_50px_rgba(251,191,36,0.55)] max-w-xl w-full';
+            titleEl.className = 'text-2xl sm:text-4xl font-black text-amber-300 drop-shadow mb-1.5';
+        }
+
+        overlay.classList.remove('hidden');
+        overlay.style.display = 'flex';
     }
-    function hideBanner() { document.getElementById('banner-overlay').classList.add('hidden'); }
+    function hideBanner() {
+        const overlay = document.getElementById('banner-overlay');
+        overlay.classList.add('hidden');
+        overlay.style.display = 'none';
+    }
 
     function update(dt) {
         for (const f of state.snowflakes) {
