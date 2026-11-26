@@ -2958,6 +2958,8 @@
 
         updateHUD();
         state.screen = 'roundIntro';
+        // Ekran durumu değiştikten sonra kontrolleri senkronize et (rövanş dahil).
+        syncTouchVisibility();
         showBanner(`${state.round}. ROUND BAŞLIYOR!`, 'AT tuşuna basılı tut, eksen x\'ten y\'ye ilerlesin, bırakınca fırlat!', 'intro');
 
         const token = state.matchToken;
@@ -2965,6 +2967,7 @@
             if (token === state.matchToken && state.screen === 'roundIntro') {
                 hideBanner();
                 state.screen = 'playing';
+                syncTouchVisibility();
             }
         }, 1500);
     }
@@ -3272,9 +3275,17 @@
             }
 
             for (const p of state.players) {
-                if (!p.isAlive || p.team === sb.team || p.isRemote) continue;
+                if (!p.isAlive || p.team === sb.team) continue;
                 const hb = p.getHitbox();
                 if (dist(sb.x, sb.y, hb.x, hb.y) < sb.radius + hb.r) {
+                    // Uzak oyuncuya karşı yerel çarpışma yalnızca görsel öngörüdür:
+                    // kartopu rakibin içinden geçmez, fakat hasarı sadece hedef istemci doğrular.
+                    if (net.active && p.isRemote) {
+                        spawnSnowPuff(sb.x, sb.y, sb.isMega ? 26 : 16, '#ffffff');
+                        triggerShake(0.10, sb.isMega ? 5 : 3);
+                        state.snowballs.splice(i, 1);
+                        break;
+                    }
                     const dealt = p.takeHit(sb);
                     if (net.active) {
                         netSend({ t: 'hit', sid: sb.sid, pid: p.pid, by: sb.owner ? sb.owner.pid : '', d: dealt || 0, mg: sb.isMega ? 1 : 0, fr: sb.isFreeze ? 1 : 0 });
