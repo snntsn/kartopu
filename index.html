@@ -3231,6 +3231,37 @@
             }
         }
 
+        // Kartopu-kartopu çarpışmalarını oyuncu çarpışmalarından ÖNCE öngör.
+        // Böylece ortada çarpışıp yok olacak kartopları aynı frame içinde
+        // ilerideki oyuncuya hayalet hasar veremez.
+        const cancelledSnowballSids = new Set();
+        const projectedSnowballs = state.snowballs.map(sb => ({
+            sb,
+            x: sb.x + sb.vx * dt,
+            y: sb.y + (sb.vy + (GRAVITY * 0.45) * dt) * dt
+        }));
+        for (let a = 0; a < projectedSnowballs.length; a++) {
+            const pa = projectedSnowballs[a];
+            if (cancelledSnowballSids.has(pa.sb.sid)) continue;
+            for (let b = a + 1; b < projectedSnowballs.length; b++) {
+                const pb = projectedSnowballs[b];
+                if (cancelledSnowballSids.has(pb.sb.sid) || pa.sb.team === pb.sb.team) continue;
+                if (dist(pa.x, pa.y, pb.x, pb.y) < pa.sb.radius + pb.sb.radius) {
+                    cancelledSnowballSids.add(pa.sb.sid);
+                    cancelledSnowballSids.add(pb.sb.sid);
+                    const midX = (pa.x + pb.x) * 0.5;
+                    const midY = (pa.y + pb.y) * 0.5;
+                    spawnSnowPuff(midX, midY, 20, '#ffffff');
+                    spawnFloatingText(midX, midY - 12, '❄️ ÇARPIŞMA!', '#e0f2fe');
+                    sfx.playHit(pa.sb.isMega || pb.sb.isMega);
+                    break;
+                }
+            }
+        }
+        if (cancelledSnowballSids.size) {
+            state.snowballs = state.snowballs.filter(sb => !cancelledSnowballSids.has(sb.sid));
+        }
+
         for (let i = state.snowballs.length - 1; i >= 0; i--) {
             const sb = state.snowballs[i];
             // Kartopu hareketinin önceki noktası: hızlı kartoplarında çarpışma kaçmasın.
@@ -3284,7 +3315,8 @@
                 const segLenSq = segX * segX + segY * segY;
                 const proj = segLenSq > 0 ? clamp(((hb.x - sbPrevX) * segX + (hb.y - sbPrevY) * segY) / segLenSq, 0, 1) : 0;
                 const closestX = sbPrevX + segX * proj, closestY = sbPrevY + segY * proj;
-                const remoteVisualPadding = (net.active && p.isRemote) ? 8 : 0;
+                // Remote oyuncu tahmini hitbox'ı genişletilmesin; gerçek çarpışma sınırını kullan.
+                const remoteVisualPadding = 0;
                 if (dist(closestX, closestY, hb.x, hb.y) < sb.radius + hb.r + remoteVisualPadding) {
                     // Uzak oyuncuya karşı yerel çarpışma yalnızca görsel öngörüdür:
                     // kartopu rakibin içinden geçmez, fakat hasarı sadece hedef istemci doğrular.
@@ -3308,31 +3340,6 @@
             }
         }
 
-        const destroyedIndices = new Set();
-        for (let a = 0; a < state.snowballs.length; a++) {
-            if (destroyedIndices.has(a)) continue;
-            const sbA = state.snowballs[a];
-            for (let b = a + 1; b < state.snowballs.length; b++) {
-                if (destroyedIndices.has(b)) continue;
-                const sbB = state.snowballs[b];
-                if (sbA.team === sbB.team) continue;
-
-                if (dist(sbA.x, sbA.y, sbB.x, sbB.y) < sbA.radius + sbB.radius) {
-                    destroyedIndices.add(a);
-                    destroyedIndices.add(b);
-                    const midX = (sbA.x + sbB.x) * 0.5;
-                    const midY = (sbA.y + sbB.y) * 0.5;
-                    spawnSnowPuff(midX, midY, 20, '#ffffff');
-                    spawnFloatingText(midX, midY - 12, '❄️ ÇARPIŞMA!', '#e0f2fe');
-                    sfx.playHit(sbA.isMega || sbB.isMega);
-                    break;
-                }
-            }
-        }
-
-        if (destroyedIndices.size > 0) {
-            state.snowballs = state.snowballs.filter((_, idx) => !destroyedIndices.has(idx));
-        }
     }
 
     function drawMysteryBoxes(ctx) {
