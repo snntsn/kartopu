@@ -3233,6 +3233,8 @@
 
         for (let i = state.snowballs.length - 1; i >= 0; i--) {
             const sb = state.snowballs[i];
+            // Kartopu hareketinin önceki noktası: hızlı kartoplarında çarpışma kaçmasın.
+            const sbPrevX = sb.x, sbPrevY = sb.y;
             sb.vy += (GRAVITY * 0.45) * dt;
             sb.x += sb.vx * dt;
             sb.y += sb.vy * dt;
@@ -3277,7 +3279,13 @@
             for (const p of state.players) {
                 if (!p.isAlive || p.team === sb.team) continue;
                 const hb = p.getHitbox();
-                if (dist(sb.x, sb.y, hb.x, hb.y) < sb.radius + hb.r) {
+                // Kartopunun bu frame içindeki yolunu da kontrol et (swept collision).
+                const segX = sb.x - sbPrevX, segY = sb.y - sbPrevY;
+                const segLenSq = segX * segX + segY * segY;
+                const proj = segLenSq > 0 ? clamp(((hb.x - sbPrevX) * segX + (hb.y - sbPrevY) * segY) / segLenSq, 0, 1) : 0;
+                const closestX = sbPrevX + segX * proj, closestY = sbPrevY + segY * proj;
+                const remoteVisualPadding = (net.active && p.isRemote) ? 8 : 0;
+                if (dist(closestX, closestY, hb.x, hb.y) < sb.radius + hb.r + remoteVisualPadding) {
                     // Uzak oyuncuya karşı yerel çarpışma yalnızca görsel öngörüdür:
                     // kartopu rakibin içinden geçmez, fakat hasarı sadece hedef istemci doğrular.
                     if (net.active && p.isRemote) {
