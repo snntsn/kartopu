@@ -7,6 +7,8 @@
     <meta name="mobile-web-app-capable" content="yes">
     <title>Kartopu Savaşı</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
     <style>
         * {
@@ -401,6 +403,7 @@
                             <span class="text-xs font-black text-sky-800 bg-white px-2.5 py-1.5 rounded-xl border border-sky-300">
                                 ODA: <span id="lobby-room-code" class="font-mono text-blue-700">—</span>
                             </span>
+                            <span id="net-badge" class="text-[10px] font-black px-2 py-1 rounded-xl bg-slate-200 text-slate-600">⏳ Bağlanıyor…</span>
                             <input id="join-room-input" type="text" maxlength="5" placeholder="Kod" class="px-2.5 py-1.5 rounded-xl border-2 border-sky-300 bg-white text-xs font-mono font-bold text-slate-800 w-20 uppercase focus:outline-none focus:border-sky-600">
                             <button id="btn-join-room" type="button" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black cursor-pointer">Katıl</button>
                         </div>
@@ -655,7 +658,7 @@
 
     const WORLD_W = 1600;
     const WORLD_H = 720;
-    const GROUND_Y = 535;
+    const GROUND_Y = 570;
     const GRAVITY = 1950;
     const MOUND_X = WORLD_W / 2;
     const MOUND_W = 86;
@@ -764,459 +767,24 @@
         botDifficulties: ['medium']
     };
 
-
-    // =========================================================================
-    // FIREBASE REALTIME DATABASE ÇEVRİMİÇİ ODA & SENKRONİZASYON KATMANI
-    // =========================================================================
-    const FIREBASE_DB_URL = "https://kartopu-ddfbf-default-rtdb.firebaseio.com";
-    const clientId = "p_" + Math.random().toString(36).slice(2, 9);
-
-    const onlineSync = {
-        roomCode: null,
-        isHost: false,
-        pollTimer: null,
-        lastPushTime: 0,
-        seenSnowballIds: new Set(),
-        lastRoundSynced: 0,
-        lastMatchEndSynced: false
-    };
-
-    async function fbRequest(path, method = "GET", body = null) {
-        const cleanPath = path.replace(/^\/+|\/+$/g, "");
-        const url = `${FIREBASE_DB_URL}/${cleanPath}.json`;
-        const opts = { method };
-        if (body !== null) {
-            opts.headers = { "Content-Type": "application/json" };
-            opts.body = JSON.stringify(body);
-        }
-        const res = await fetch(url, opts);
-        if (!res.ok) {
-            throw new Error(`Firebase HTTP ${res.status}`);
-        }
-        return res.json();
-    }
-
-    function stopOnlineSync() {
-        if (onlineSync.pollTimer) {
-            clearInterval(onlineSync.pollTimer);
-            onlineSync.pollTimer = null;
-        }
-        onlineSync.roomCode = null;
-        onlineSync.isHost = false;
-        onlineSync.lastPushTime = 0;
-        onlineSync.seenSnowballIds.clear();
-        onlineSync.lastRoundSynced = 0;
-        onlineSync.lastMatchEndSynced = false;
-    }
-
-    function isOnlineRoomActive() {
-        return config.playersMode === "online" && !!onlineSync.roomCode;
-    }
-
-    async function leaveFirebaseRoomOnServer() {
-        const code = onlineSync.roomCode;
-        const wasHost = onlineSync.isHost;
-        if (!code) return;
-        try {
-            await fbRequest(`rooms/${code}/players/${clientId}`, "DELETE");
-            if (wasHost) {
-                const room = await fbRequest(`rooms/${code}`, "GET").catch(() => null);
-                const remaining = room && room.players ? Object.values(room.players) : [];
-                if (remaining.length > 0) {
-                    const nextHost = remaining[0];
-                    await fbRequest(`rooms/${code}`, "PATCH", {
-                        hostId: nextHost.id,
-                        [`players/${nextHost.id}/isHost`]: true
-                    });
-                } else {
-                    await fbRequest(`rooms/${code}`, "DELETE");
-                }
-            }
-        } catch (_) {}
-    }
-
-    async function createFirebaseRoom(code, format) {
-        await leaveFirebaseRoomOnServer();
-        stopOnlineSync();
-
-        const nick = getHumanNickname();
-        const fmt = format || "1v1";
-        const roomData = {
-            code,
-            format: fmt,
-            hostId: clientId,
-            createdAt: Date.now(),
-            status: "lobby",
-            round: 1,
-            blueScore: 0,
-            redScore: 0,
-            winnerTeam: null,
-            players: {
-                [clientId]: {
-                    id: clientId,
-                    name: nick,
-                    team: "blue",
-                    avatarType: config.avatarType || "polarbear",
-                    ready: true,
-                    isHost: true,
-                    x: 300,
-                    y: GROUND_Y,
-                    hp: 100,
-                    isDucking: false,
-                    aimAngle: -0.35,
-                    charging: false,
-                    updatedAt: Date.now()
-                }
-            },
-            snowballs: {}
-        };
-
-        await fbRequest(`rooms/${code}`, "PUT", roomData);
-        onlineSync.roomCode = code;
-        onlineSync.isHost = true;
-        config.format = fmt;
-        startRoomPolling(code);
-    }
-
-    async function joinFirebaseRoom(code) {
-        const room = await fbRequest(`rooms/${code}`, "GET");
-        if (!room) {
-            return { ok: false, message: `${code} kodlu oda bulunamadı. Arkadaşınızın oda kurduğundan emin olun.` };
-        }
-
-        await leaveFirebaseRoomOnServer();
-        stopOnlineSync();
-
-        const nick = getHumanNickname();
-        const fmt = room.format || "1v1";
-        const maxPerTeam = fmt === "2v2" ? 2 : 1;
-        const playersList = Object.values(room.players || {}).filter(p => p && p.id);
-        const bluePlayers = playersList.filter(p => p.team === "blue");
-        const redPlayers = playersList.filter(p => p.team === "red");
-
-        let assignedTeam = null;
-        if (redPlayers.length < maxPerTeam) {
-            assignedTeam = "red";
-        } else if (bluePlayers.length < maxPerTeam) {
-            assignedTeam = "blue";
-        } else {
-            return { ok: false, message: `${code} odası dolu.` };
-        }
-
-        config.format = fmt;
-        onlineSync.roomCode = code;
-        onlineSync.isHost = false;
-
-        const spawnPos = getSpawnPositions(
-            (assignedTeam === "blue" ? bluePlayers.length : redPlayers.length) + 1,
-            assignedTeam
-        );
-        const startX = spawnPos[spawnPos.length - 1] ?? (assignedTeam === "blue" ? 300 : WORLD_W - 300);
-
-        const myPlayer = {
-            id: clientId,
-            name: nick,
-            team: assignedTeam,
-            avatarType: config.avatarType || "polarbear",
-            ready: true,
-            isHost: false,
-            x: startX,
-            y: GROUND_Y,
-            hp: 100,
-            isDucking: false,
-            aimAngle: assignedTeam === "blue" ? -0.35 : -(Math.PI - 0.35),
-            charging: false,
-            updatedAt: Date.now()
-        };
-
-        await fbRequest(`rooms/${code}/players/${clientId}`, "PUT", myPlayer);
-        startRoomPolling(code);
-        return { ok: true, room };
-    }
-
-    function applyRoomPlayersToLobby(room) {
-        const fmt = room.format || config.format || "1v1";
-        config.format = fmt;
-        const maxPerTeam = fmt === "2v2" ? 2 : 1;
-
-        const playersObj = room.players || {};
-        const list = Object.values(playersObj).filter(p => p && p.id);
-        if (list.length > 0 && !list.some(p => p.id === room.hostId)) {
-            room.hostId = list[0].id;
-        }
-        onlineSync.isHost = room.hostId === clientId;
-
-        const blues = list.filter(p => p.team === "blue").slice(0, maxPerTeam);
-        const reds = list.filter(p => p.team === "red").slice(0, maxPerTeam);
-
-        const slots = [];
-        for (let i = 0; i < maxPerTeam; i++) {
-            const bp = blues[i];
-            if (bp) {
-                const isMe = bp.id === clientId;
-                slots.push({
-                    team: "blue",
-                    slotIndex: i,
-                    name: bp.name,
-                    isHuman: isMe,
-                    isRemote: !isMe,
-                    isBot: false,
-                    isHost: bp.id === room.hostId,
-                    controlScheme: isMe ? "p1" : "remote",
-                    ready: bp.ready !== false
-                });
-            } else {
-                slots.push(createEmptySlot("blue", i));
-            }
-        }
-        for (let i = 0; i < maxPerTeam; i++) {
-            const rp = reds[i];
-            if (rp) {
-                const isMe = rp.id === clientId;
-                slots.push({
-                    team: "red",
-                    slotIndex: i,
-                    name: rp.name,
-                    isHuman: isMe,
-                    isRemote: !isMe,
-                    isBot: false,
-                    isHost: rp.id === room.hostId,
-                    controlScheme: isMe ? "p2" : "remote",
-                    ready: rp.ready !== false
-                });
-            } else {
-                slots.push(createEmptySlot("red", i));
-            }
-        }
-
-        lobbyState.roomCode = room.code || onlineSync.roomCode;
-        lobbyState.roomCreated = true;
-        lobbyState.slots = slots;
-        config.bots = { blue: 0, red: 0 };
-        config.botDifficulties = [];
-        renderLobby();
-        refreshMenuFlow();
-    }
-
-    function buildPlayersFromFirebaseRoom(room) {
-        const playersList = Object.values(room.players || {}).filter(p => p && p.id);
-        const blues = playersList.filter(p => p.team === "blue");
-        const reds = playersList.filter(p => p.team === "red");
-        const bPos = getSpawnPositions(Math.max(1, blues.length), "blue");
-        const rPos = getSpawnPositions(Math.max(1, reds.length), "red");
-
-        const chars = [];
-        blues.forEach((p, idx) => {
-            const isMe = p.id === clientId;
-            const ch = new SnowFighterCharacter({
-                id: idx + 1,
-                name: p.name || "Mavi Oyuncu",
-                team: "blue",
-                isHuman: isMe,
-                controlScheme: isMe ? "p1" : "remote",
-                x: typeof p.x === "number" ? p.x : (bPos[idx] ?? 300),
-                avatarType: p.avatarType || "polarbear"
-            });
-            ch.remoteId = p.id;
-            ch.isRemote = !isMe;
-            ch.hp = typeof p.hp === "number" ? p.hp : 100;
-            ch.isDucking = !!p.isDucking;
-            ch.aimAngle = typeof p.aimAngle === "number" ? p.aimAngle : -0.35;
-            ch.charging = !!p.charging;
-            chars.push(ch);
-        });
-
-        reds.forEach((p, idx) => {
-            const isMe = p.id === clientId;
-            const ch = new SnowFighterCharacter({
-                id: 10 + idx,
-                name: p.name || "Kırmızı Oyuncu",
-                team: "red",
-                isHuman: isMe,
-                controlScheme: isMe ? "p2" : "remote",
-                x: typeof p.x === "number" ? p.x : (rPos[idx] ?? (WORLD_W - 300)),
-                avatarType: p.avatarType || "penguin"
-            });
-            ch.remoteId = p.id;
-            ch.isRemote = !isMe;
-            ch.hp = typeof p.hp === "number" ? p.hp : 100;
-            ch.isDucking = !!p.isDucking;
-            ch.aimAngle = typeof p.aimAngle === "number" ? p.aimAngle : -(Math.PI - 0.35);
-            ch.charging = !!p.charging;
-            chars.push(ch);
-        });
-
-        return chars;
-    }
-
-    function startOnlineMatchFromRoom(room) {
-        sfx.init();
-        state.round = Number(room.round) || 1;
-        state.blueScore = Number(room.blueScore) || 0;
-        state.redScore = Number(room.redScore) || 0;
-        state.players = buildPlayersFromFirebaseRoom(room);
-        onlineSync.seenSnowballIds.clear();
-        onlineSync.lastRoundSynced = state.round;
-        onlineSync.lastMatchEndSynced = false;
-
-        document.getElementById("main-menu").classList.add("hidden");
-        document.getElementById("gameover-modal").classList.add("hidden");
-        document.getElementById("hud").classList.remove("hidden");
-        enterMobileMatchImmersion();
-        syncTouchVisibility();
-        setupRound();
-    }
-
-    async function publishSnowballToFirebase(sb) {
-        if (!isOnlineRoomActive()) return;
-        const sbId = "sb_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
-        onlineSync.seenSnowballIds.add(sbId);
-        try {
-            await fbRequest(`rooms/${onlineSync.roomCode}/snowballs/${sbId}`, "PUT", {
-                id: sbId,
-                senderId: clientId,
-                team: sb.team,
-                x: sb.x,
-                y: sb.y,
-                vx: sb.vx,
-                vy: sb.vy,
-                radius: sb.radius,
-                damage: sb.damage,
-                isMega: !!sb.isMega,
-                isFreeze: !!sb.isFreeze,
-                createdAt: Date.now()
-            });
-        } catch (_) {}
-    }
-
-    function syncRemotePlayersFromRoom(room) {
-        const playersObj = room.players || {};
-        for (const p of state.players) {
-            if (!p.isRemote || !p.remoteId) continue;
-            const rp = playersObj[p.remoteId];
-            if (!rp) continue;
-
-            if (typeof rp.x === "number") {
-                p.x += (rp.x - p.x) * 0.65;
-            }
-            if (typeof rp.y === "number") {
-                p.y += (rp.y - p.y) * 0.65;
-            }
-            if (typeof rp.hp === "number") {
-                p.hp = rp.hp;
-            }
-            p.isDucking = !!rp.isDucking;
-            if (typeof rp.aimAngle === "number") {
-                p.aimAngle = rp.aimAngle;
-            }
-            p.charging = !!rp.charging;
-            if (rp.name) p.name = rp.name;
-            if (rp.avatarType) p.avatarType = rp.avatarType;
-        }
-        updateHUD();
-    }
-
-    function syncRemoteSnowballsFromRoom(room) {
-        const sbObj = room.snowballs || {};
-        const list = Object.values(sbObj).filter(s => s && s.id && s.senderId !== clientId);
-        for (const item of list) {
-            if (onlineSync.seenSnowballIds.has(item.id)) continue;
-            onlineSync.seenSnowballIds.add(item.id);
-
-            const owner = state.players.find(p => p.remoteId === item.senderId) ||
-                          state.players.find(p => p.team === item.team) ||
-                          null;
-
-            state.snowballs.push({
-                id: item.id,
-                owner,
-                team: item.team,
-                x: item.x,
-                y: item.y,
-                vx: item.vx,
-                vy: item.vy,
-                radius: item.radius || 12,
-                damage: item.damage || 18,
-                isMega: !!item.isMega,
-                isFreeze: !!item.isFreeze,
-                rot: 0,
-                trail: []
-            });
-            sfx.playThrow(item.isMega ? 1 : 0.65);
-        }
-    }
-
-    async function pushLocalPlayerStateToFirebase(force = false) {
-        if (!isOnlineRoomActive()) return;
-        const now = performance.now();
-        if (!force && now - onlineSync.lastPushTime < 85) return;
-        onlineSync.lastPushTime = now;
-
-        const me = state.players.find(p => p.isHuman);
-        if (!me) return;
-
-        try {
-            await fbRequest(`rooms/${onlineSync.roomCode}/players/${clientId}`, "PATCH", {
-                name: me.name,
-                team: me.team,
-                avatarType: me.avatarType,
-                x: me.x,
-                y: me.y,
-                hp: me.hp,
-                isDucking: me.isDucking,
-                aimAngle: me.aimAngle,
-                charging: me.charging,
-                updatedAt: Date.now()
-            });
-        } catch (_) {}
-    }
-
-    function startRoomPolling(code) {
-        if (onlineSync.pollTimer) clearInterval(onlineSync.pollTimer);
-
-        const pollOnce = async () => {
-            if (!onlineSync.roomCode || onlineSync.roomCode !== code) return;
-            try {
-                const room = await fbRequest(`rooms/${code}`, "GET");
-                if (!room) {
-                    if (state.screen !== "menu") {
-                        returnToMenu();
-                    }
-                    return;
-                }
-
-                applyRoomPlayersToLobby(room);
-
-                if (room.status === "playing") {
-                    if (state.screen === "menu") {
-                        startOnlineMatchFromRoom(room);
-                    } else if (state.screen === "playing" || state.screen === "roundIntro") {
-                        syncRemotePlayersFromRoom(room);
-                        syncRemoteSnowballsFromRoom(room);
-
-                        const remoteRound = Number(room.round) || 1;
-                        const remoteBlue = Number(room.blueScore) || 0;
-                        const remoteRed = Number(room.redScore) || 0;
-                        if (remoteRound > state.round || remoteBlue !== state.blueScore || remoteRed !== state.redScore) {
-                            state.blueScore = remoteBlue;
-                            state.redScore = remoteRed;
-                            updateHUD();
-                        }
-                    }
-                } else if (room.status === "lobby" && state.screen !== "menu") {
-                    returnToMenu();
-                }
-            } catch (_) {}
-        };
-
-        pollOnce();
-        onlineSync.pollTimer = setInterval(pollOnce, 140);
-    }
-
     const lobbyState = {
         roomCode: 'KAR42',
         slots: [],
         roomCreated: false
+    };
+
+    const net = {
+        active: false,      // online maç şu an oynanıyor mu
+        code: null,         // oda kodu
+        isHost: false,
+        hostId: null,
+        matchId: null,
+        mySlotKey: null,
+        roomRef: null,
+        detachRoom: null,
+        detachMatch: null,
+        pendingMatch: null,
+        lastSend: 0
     };
 
     const aimInput = {
@@ -1234,6 +802,7 @@
 
     const state = {
         screen: 'menu',
+        matchToken: 0,
         round: 1,
         roundTimer: 60,
         blueScore: 0,
@@ -1278,6 +847,13 @@
             this.controlScheme = controlScheme;
             this.avatarType = avatarType;
             this.aiDifficulty = aiDifficulty;
+
+            this.pid = null;            // online slot anahtarı (blue0, red1 ...)
+            this.isRemote = false;      // başka bir istemci tarafından yönetiliyor
+            this.net = null;            // son ağ paketi
+            this.disconnected = false;
+            this.humanSlot = false;
+            this.sbSeq = 0;
 
             this.x = x;
             this.y = GROUND_Y;
@@ -1334,6 +910,7 @@
         }
 
         reset(x) {
+            this.net = null;
             this.x = x;
             this.y = GROUND_Y;
             this.vx = 0;
@@ -1367,6 +944,40 @@
         }
 
         get isAlive() { return this.hp > 0; }
+
+        packNet() {
+            const r = v => Math.round(v * 100) / 100;
+            return {
+                m: net.matchId, rd: state.round,
+                x: Math.round(this.x), y: Math.round(this.y), hp: Math.round(this.hp), sh: Math.round(this.shield),
+                d: this.isDucking ? 1 : 0, a: r(this.aimAngle), c: this.charging ? 1 : 0, sp: r(this.sweepProgress),
+                fz: r(Math.max(0, this.frozenTimer)), mg: this.megaAmmo, fr: this.freezeAmmo,
+                rp: r(Math.max(0, this.rapidTimer)), sj: r(Math.max(0, this.superJumpTimer)), g: this.grounded ? 1 : 0
+            };
+        }
+
+        stepRemote(dt) {
+            const n = this.net;
+            if (!n) return;
+            const k = Math.min(1, dt * 14);
+            const dx = n.x - this.x;
+            if (Math.abs(dx) > 220) this.x = n.x; else this.x += dx * k;
+            this.y += (n.y - this.y) * k;
+            this.shield = n.sh;
+            this.isDucking = !!n.d;
+            this.aimAngle = n.a;
+            this.charging = !!n.c;
+            this.sweepProgress = n.sp;
+            this.frozenTimer = n.fz || 0;
+            this.megaAmmo = n.mg;
+            this.freezeAmmo = n.fr;
+            this.rapidTimer = n.rp;
+            this.superJumpTimer = n.sj;
+            this.grounded = !!n.g;
+            this.charge = clamp(0.45 + (n.sp || 0) * 0.55, 0.35, 1);
+            if (Math.abs(dx) > 2 && this.grounded && !this.isDucking) this.walkPhase += dt * 16;
+            else this.walkPhase = 0;
+        }
 
         getHitbox() {
             if (this.isDucking) {
@@ -1427,6 +1038,11 @@
             const targetSY = this.isDucking ? 0.70 : 1.0;
             this.scaleX += (targetSX - this.scaleX) * Math.min(1, dt * 18);
             this.scaleY += (targetSY - this.scaleY) * Math.min(1, dt * 18);
+
+            if (this.isRemote) {
+                this.stepRemote(dt);
+                return;
+            }
 
             if (!this.isAlive) {
                 if (this.y < GROUND_Y) {
@@ -1659,14 +1275,20 @@
             const speed = this.getThrowSpeed();
             const radius = isMega ? 24 : (10 + this.charge * 4);
             const damage = isMega ? 38 : Math.round(14 + this.charge * 16);
+            const sbX = hb.x + Math.cos(angle) * (hb.r + 12);
+            const sbY = hb.y + Math.sin(angle) * (hb.r + 12);
+            const sbVx = Math.cos(angle) * speed;
+            const sbVy = Math.sin(angle) * speed;
+            const sid = (this.pid || ('p' + this.id)) + '_' + (++this.sbSeq);
 
             state.snowballs.push({
+                sid,
                 owner: this,
                 team: this.team,
-                x: hb.x + Math.cos(angle) * (hb.r + 12),
-                y: hb.y + Math.sin(angle) * (hb.r + 12),
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
+                x: sbX,
+                y: sbY,
+                vx: sbVx,
+                vy: sbVy,
                 radius,
                 damage,
                 isMega,
@@ -1675,10 +1297,14 @@
                 trail: []
             });
 
-            const launchedBall = state.snowballs[state.snowballs.length - 1];
-            if (this.isHuman && launchedBall && isOnlineRoomActive()) {
-                publishSnowballToFirebase(launchedBall);
+            if (net.active) {
+                netSend({
+                    t: 'sb', sid, pid: this.pid,
+                    x: Math.round(sbX), y: Math.round(sbY), vx: Math.round(sbVx), vy: Math.round(sbVy),
+                    r: Math.round(radius * 10) / 10, dm: damage, mg: isMega ? 1 : 0, fr: isFreeze ? 1 : 0
+                });
             }
+
             this.stats.throws++;
             this.cooldown = this.isHuman
                 ? (this.rapidTimer > 0 ? 0.28 : 0.60)
@@ -1689,11 +1315,12 @@
         }
 
         takeHit(sb) {
-            if (!this.isAlive) return;
+            if (!this.isAlive) return 0;
             this.hurtTimer = 0.35;
 
             const knockDir = sb.vx >= 0 ? 1 : -1;
-            const push = sb.isMega ? 105 : 46;
+            // Sarkıt (vx = 0) oyuncuyu yana savurmasın
+            const push = sb.vx === 0 ? 0 : (sb.isMega ? 105 : 46);
             const halfBlock = MOUND_W / 2 + this.headRadius + 6;
             if (this.team === 'blue') {
                 this.x = clamp(this.x + knockDir * push, 56, MOUND_X - halfBlock);
@@ -1707,6 +1334,7 @@
                 spawnFloatingText(this.x, this.y - 102, '🥶 BUZ TUTTU!', '#7dd3fc');
             }
 
+            let dealt = 0;
             let dmg = sb.damage;
             if (this.shield > 0) {
                 const absorbed = Math.min(this.shield, dmg);
@@ -1717,7 +1345,9 @@
 
             if (dmg > 0) {
                 this.hp = Math.max(0, this.hp - dmg);
-                if (sb.owner && sb.owner.stats) {
+                dealt = dmg;
+                // Online'da istatistikleri 'hit' olayı tüm istemcilerde eşit işler
+                if (!net.active && sb.owner && sb.owner.stats) {
                     sb.owner.stats.hits++;
                     sb.owner.stats.damage += dmg;
                     if (sb.owner.giggleCooldown <= 0 && Math.random() < 0.38) {
@@ -1737,6 +1367,7 @@
                 triggerShake(0.28, 10);
                 if (typeof checkRoundEnd === 'function') checkRoundEnd();
             }
+            return dealt;
         }
 
         draw(ctx) {
@@ -2425,7 +2056,9 @@
 
     function spawnIcicleAbovePlayer(player) {
         const dropX = clamp(player.x + rand(-24, 24), MOUND_X - CAMP_ZONE_HALF_W + 20, MOUND_X + CAMP_ZONE_HALF_W - 20);
+        const id = 'ic_' + Date.now().toString(36) + Math.floor(Math.random() * 1e4);
         state.icicles.push({
+            id,
             x: dropX,
             y: 42,
             vy: 140,
@@ -2434,6 +2067,7 @@
             damage: 22,
             targetTeam: player.team
         });
+        if (net.active) netSend({ t: 'ic', id, x: Math.round(dropX), tt: player.team });
     }
 
     const MYSTERY_POWERS = [
@@ -2446,14 +2080,17 @@
     function spawnMysteryBox() {
         if (state.mysteryBoxes.length >= 2) return;
         const p = MYSTERY_POWERS[Math.floor(Math.random() * MYSTERY_POWERS.length)];
-        state.mysteryBoxes.push({
+        const box = {
             ...p,
-            x: MOUND_X + rand(-240, 240),
-            y: rand(220, 355),
+            id: 'bx_' + Date.now().toString(36) + Math.floor(Math.random() * 1e4),
+            x: Math.round(MOUND_X + rand(-240, 240)),
+            y: Math.round(rand(220, 355)),
             size: 46,
             bob: rand(0, Math.PI * 2),
             life: 14
-        });
+        };
+        state.mysteryBoxes.push(box);
+        if (net.active) netSend({ t: 'box', id: box.id, ty: box.type, x: box.x, y: box.y });
     }
 
     function grantMysteryPower(player, box) {
@@ -2523,18 +2160,66 @@
         return code;
     }
 
-    function createEmptySlot(team, indexInTeam) {
-        return {
-            team,
-            slotIndex: indexInTeam,
-            name: '',
-            isHuman: false,
-            isBot: false,
-            controlScheme: 'empty',
-            ready: false,
-            aiDifficulty: config.difficulty || 'medium'
-        };
+    // =====================================================================
+    //  FIREBASE / ÇEVRİM İÇİ
+    // =====================================================================
+    const FIREBASE_DB_URL = 'https://kartopu-ddfbf-default-rtdb.firebaseio.com';
+    const myUid = 'u' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+    const SLOT_ORDER_ALL = ['blue0', 'blue1', 'red0', 'red1'];
+    const NET_SEND_MS = 80;
+
+    let db = null;
+    let fbReady = false;
+    let fbConnected = false;
+    try {
+        if (typeof firebase !== 'undefined') {
+            firebase.initializeApp({ databaseURL: FIREBASE_DB_URL });
+            db = firebase.database();
+            fbReady = true;
+            db.ref('.info/connected').on('value', snap => {
+                fbConnected = !!snap.val();
+                updateNetBadge();
+            });
+        }
+    } catch (err) {
+        console.error('Firebase başlatılamadı:', err);
     }
+
+    function esc(str) {
+        return String(str == null ? '' : str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function getLocalPlayer() { return state.players.find(p => p.isHuman) || null; }
+    function playerByPid(pid) { return state.players.find(p => p.pid === pid) || null; }
+    function setLobbyMsg(txt) {
+        const el = document.getElementById('lobby-status-msg');
+        if (el) el.textContent = txt;
+    }
+
+    function updateNetBadge() {
+        const el = document.getElementById('net-badge');
+        if (!el) return;
+        let txt, cls;
+        if (!fbReady) { txt = '⚠️ Firebase yüklenemedi'; cls = 'bg-rose-100 text-rose-700'; }
+        else if (fbConnected) { txt = '🟢 Sunucuya bağlı'; cls = 'bg-emerald-100 text-emerald-700'; }
+        else { txt = '🟠 Bağlanıyor…'; cls = 'bg-amber-100 text-amber-700'; }
+        el.textContent = txt;
+        el.className = 'text-[10px] font-black px-2 py-1 rounded-xl ' + cls;
+    }
+    updateNetBadge();
+
+    function netEnsureReady() {
+        if (!fbReady || !db) {
+            setLobbyMsg('⚠️ Firebase yüklenemedi. İnternet bağlantını kontrol edip sayfayı yenile.');
+            return false;
+        }
+        return true;
+    }
+
+    function emptySlotData(key) {
+        return { team: key.indexOf('blue') === 0 ? 'blue' : 'red', name: '', uid: '', isBot: false, ready: false, avatar: 'polarbear', diff: 'medium' };
+    }
+    function slotKeysFor(fmt) { return fmt === '2v2' ? SLOT_ORDER_ALL.slice() : ['blue0', 'red0']; }
 
     function syncConfigBotsFromLobby() {
         const blueBots = lobbyState.slots.filter(s => s.team === 'blue' && s.isBot);
@@ -2544,244 +2229,542 @@
         config.botDifficulties = [...blueBots, ...redBots].map(b => b.aiDifficulty || config.difficulty || 'medium');
     }
 
-    function buildLobbySlots(customCode = null) {
-        if (customCode) {
-            lobbyState.roomCode = customCode;
-            lobbyState.roomCreated = true;
+    // ---------------- oda dinleyicileri ----------------
+    function handleMeta(meta) {
+        if (!net.code) return;
+        if (!meta) { handleRoomClosed(); return; }
+        net.hostId = meta.hostId;
+        net.isHost = meta.hostId === myUid;
+        if (meta.format) config.format = meta.format;
+        if (meta.status === 'playing' && meta.matchId && meta.matchId !== net.matchId) {
+            if (lobbyState.slots.length) beginOnlineMatch(meta.matchId);
+            else net.pendingMatch = meta.matchId;   // slotlar henüz gelmedi
         }
-        const nick = getHumanNickname();
-        const fmt = config.format || '1v1';
+        refreshMenuFlow();
+        renderLobby();
+    }
 
-        if (!lobbyState.roomCreated) {
-            lobbyState.slots = [];
-            syncConfigBotsFromLobby();
-            renderLobby();
-            return;
-        }
+    function handleSlots(val) {
+        const keys = SLOT_ORDER_ALL.filter(k => val && val[k]);
+        lobbyState.slots = keys.map(k => {
+            const s = val[k];
+            return {
+                key: k,
+                team: s.team || (k.indexOf('blue') === 0 ? 'blue' : 'red'),
+                slotIndex: Number(k.slice(-1)),
+                name: s.name || '',
+                uid: s.uid || '',
+                isHuman: !!s.uid,
+                isBot: !!s.isBot,
+                controlScheme: s.isBot ? 'ai' : (s.uid ? 'p1' : 'empty'),
+                ready: !!s.ready,
+                avatar: s.avatar || 'polarbear',
+                aiDifficulty: s.diff || 'medium'
+            };
+        });
+        const mine = lobbyState.slots.find(s => s.uid === myUid);
+        net.mySlotKey = mine ? mine.key : net.mySlotKey;
+        syncConfigBotsFromLobby();
 
-        const existingHuman = lobbyState.slots.find(s => s.isHuman);
-        const humanTeam = existingHuman ? existingHuman.team : 'blue';
-        const humanReady = existingHuman ? existingHuman.ready : true;
-
-        const existingBlueBots = lobbyState.slots.filter(s => s.team === 'blue' && s.isBot);
-        const existingRedBots = lobbyState.slots.filter(s => s.team === 'red' && s.isBot);
-
-        if (fmt === '1v1') {
-            const nextSlots = [createEmptySlot('blue', 0), createEmptySlot('red', 0)];
-            const hSlot = nextSlots.find(s => s.team === humanTeam) || nextSlots[0];
-            hSlot.name = nick;
-            hSlot.isHuman = true;
-            hSlot.isBot = false;
-            hSlot.controlScheme = 'p1';
-            hSlot.ready = humanReady;
-
-            const otherSlot = nextSlots.find(s => s !== hSlot);
-            const otherBots = otherSlot.team === 'blue' ? existingBlueBots : existingRedBots;
-            if (otherBots[0]) {
-                otherSlot.name = otherBots[0].name || 'KızılFırtına';
-                otherSlot.isBot = true;
-                otherSlot.controlScheme = 'ai';
-                otherSlot.ready = true;
-                otherSlot.aiDifficulty = otherBots[0].aiDifficulty || config.difficulty || 'medium';
+        if (net.active) {
+            for (const p of state.players) {
+                if (!p.humanSlot || p.disconnected) continue;
+                const s = lobbyState.slots.find(x => x.key === p.pid);
+                if (!s || !s.uid) {
+                    p.disconnected = true;
+                    p.hp = 0;
+                    spawnFloatingText(p.x, p.y - 110, '📴 Bağlantı koptu', '#fca5a5');
+                    updateHUD();
+                }
             }
-
-            lobbyState.slots = nextSlots;
-        } else {
-            const nextSlots = [
-                createEmptySlot('blue', 0),
-                createEmptySlot('blue', 1),
-                createEmptySlot('red', 0),
-                createEmptySlot('red', 1)
-            ];
-
-            const hSlot = nextSlots.find(s => s.team === humanTeam) || nextSlots[0];
-            hSlot.name = nick;
-            hSlot.isHuman = true;
-            hSlot.isBot = false;
-            hSlot.controlScheme = 'p1';
-            hSlot.ready = humanReady;
-
-            const blueOpenSlots = nextSlots.filter(s => s.team === 'blue' && !s.isHuman);
-            existingBlueBots.slice(0, blueOpenSlots.length).forEach((bot, idx) => {
-                blueOpenSlots[idx].name = bot.name || `MaviBot${idx + 1}`;
-                blueOpenSlots[idx].isBot = true;
-                blueOpenSlots[idx].controlScheme = 'ai';
-                blueOpenSlots[idx].ready = true;
-                blueOpenSlots[idx].aiDifficulty = bot.aiDifficulty || config.difficulty || 'medium';
-            });
-
-            const redOpenSlots = nextSlots.filter(s => s.team === 'red' && !s.isHuman);
-            existingRedBots.slice(0, redOpenSlots.length).forEach((bot, idx) => {
-                redOpenSlots[idx].name = bot.name || (idx === 0 ? 'KızılFırtına' : `KızılBot${idx + 1}`);
-                redOpenSlots[idx].isBot = true;
-                redOpenSlots[idx].controlScheme = 'ai';
-                redOpenSlots[idx].ready = true;
-                redOpenSlots[idx].aiDifficulty = bot.aiDifficulty || config.difficulty || 'medium';
-            });
-
-            lobbyState.slots = nextSlots;
         }
-
-        syncConfigBotsFromLobby();
         renderLobby();
+        if (net.pendingMatch && lobbyState.slots.length) {
+            const m = net.pendingMatch;
+            net.pendingMatch = null;
+            beginOnlineMatch(m);
+        }
     }
 
-    function addBotToSlot(slotIdx) {
-        const slot = lobbyState.slots[slotIdx];
-        if (!slot || slot.isHuman || slot.isBot) return;
-        const teamBotCount = lobbyState.slots.filter(s => s.team === slot.team && s.isBot).length;
-        const defaultName = slot.team === 'blue'
-            ? (teamBotCount === 0 ? 'MaviYıldız' : `MaviBot${teamBotCount + 1}`)
-            : (teamBotCount === 0 ? 'KızılFırtına' : `KızılBot${teamBotCount + 1}`);
-
-        slot.name = defaultName;
-        slot.isBot = true;
-        slot.isHuman = false;
-        slot.controlScheme = 'ai';
-        slot.ready = true;
-        slot.aiDifficulty = config.difficulty || 'medium';
-        syncConfigBotsFromLobby();
+    function handleRoomClosed() {
+        const wasInMatch = state.screen !== 'menu';
+        netDetachAll();
+        lobbyState.roomCreated = false;
+        lobbyState.slots = [];
         renderLobby();
         refreshMenuFlow();
-        document.getElementById('lobby-status-msg').textContent = `${slot.team === 'blue' ? 'Mavi' : 'Kırmızı'} takıma ${slot.name} eklendi.`;
+        if (wasInMatch) returnToMenu();
+        setLobbyMsg('Oda kapandı (kurucu ayrıldı).');
     }
 
-    function removeBotFromSlot(slotIdx) {
-        const slot = lobbyState.slots[slotIdx];
-        if (!slot || !slot.isBot) return;
-        const removedName = slot.name;
-        slot.name = '';
-        slot.isBot = false;
-        slot.isHuman = false;
-        slot.controlScheme = 'empty';
-        slot.ready = false;
-        syncConfigBotsFromLobby();
-        renderLobby();
-        refreshMenuFlow();
-        document.getElementById('lobby-status-msg').textContent = `${removedName} odadan çıkarıldı.`;
+    function netDetachAll() {
+        if (net.detachMatch) { net.detachMatch(); net.detachMatch = null; }
+        if (net.detachRoom) { net.detachRoom(); net.detachRoom = null; }
+        net.active = false;
+        net.code = null;
+        net.roomRef = null;
+        net.matchId = null;
+        net.pendingMatch = null;
+        net.mySlotKey = null;
+        net.isHost = false;
+        net.hostId = null;
+    }
+
+    function netAttach(code) {
+        net.code = code;
+        net.roomRef = db.ref('rooms/' + code);
+        net.matchId = null;
+        net.active = false;
+        lobbyState.roomCode = code;
+        lobbyState.roomCreated = true;
+        config.bots = { blue: 0, red: 0 };
+        config.botDifficulties = [];
+        const metaRef = net.roomRef.child('meta');
+        const slotsRef = net.roomRef.child('slots');
+        const metaCb = metaRef.on('value', snap => handleMeta(snap.val()));
+        const slotsCb = slotsRef.on('value', snap => handleSlots(snap.val()));
+        net.detachRoom = () => {
+            metaRef.off('value', metaCb);
+            slotsRef.off('value', slotsCb);
+        };
+    }
+
+    // ---------------- oda oluştur / katıl / ayrıl ----------------
+    function uniqueRoomCode(tries) {
+        const code = generateRoomCode();
+        return db.ref('rooms/' + code + '/meta').once('value').then(s => (s.exists() && tries > 0) ? uniqueRoomCode(tries - 1) : code);
+    }
+
+    function netCreateRoom(fmt, publishQuick) {
+        return uniqueRoomCode(6).then(code => {
+            const slots = {};
+            slotKeysFor(fmt).forEach(k => { slots[k] = emptySlotData(k); });
+            slots.blue0 = Object.assign({}, slots.blue0, { uid: myUid, name: getHumanNickname(), ready: true, avatar: config.avatarType });
+            const ref = db.ref('rooms/' + code);
+            return ref.set({
+                meta: { format: fmt, hostId: myUid, status: 'lobby', matchId: '', created: firebase.database.ServerValue.TIMESTAMP },
+                slots
+            }).then(() => {
+                ref.onDisconnect().remove();
+                config.format = fmt;
+                netAttach(code);
+                net.mySlotKey = 'blue0';
+                if (publishQuick) db.ref('quick/' + fmt).set(code);
+                return code;
+            });
+        });
+    }
+
+    function netJoinRoom(code) {
+        return db.ref('rooms/' + code).once('value').then(snap => {
+            const room = snap.val();
+            if (!room || !room.meta) throw new Error('Oda bulunamadı.');
+            if (room.meta.status !== 'lobby') throw new Error('Bu odada maç zaten başladı.');
+            const slots = room.slots || {};
+            const count = { blue: 0, red: 0 };
+            SLOT_ORDER_ALL.forEach(k => { const x = slots[k]; if (x && (x.uid || x.isBot)) count[x.team]++; });
+            const free = SLOT_ORDER_ALL.filter(k => slots[k] && !slots[k].uid && !slots[k].isBot)
+                .sort((a, b) => count[slots[a].team] - count[slots[b].team]);
+            if (!free.length) throw new Error('Oda dolu.');
+
+            const tryClaim = (i) => {
+                if (i >= free.length) throw new Error('Oda dolu.');
+                const key = free[i];
+                const known = slots[key];
+                const sref = db.ref('rooms/' + code + '/slots/' + key);
+                return sref.transaction(cur => {
+                    const base = cur === null ? known : cur;
+                    if (base && !base.uid && !base.isBot) {
+                        return Object.assign({}, base, { uid: myUid, name: getHumanNickname(), ready: true, avatar: config.avatarType });
+                    }
+                    return undefined;
+                }).then(res => {
+                    if (!res.committed) return tryClaim(i + 1);
+                    sref.onDisconnect().update({ uid: '', name: '', ready: false });
+                    config.format = room.meta.format || '1v1';
+                    netAttach(code);
+                    net.mySlotKey = key;
+                    return code;
+                });
+            };
+            return tryClaim(0);
+        });
+    }
+
+    function clearQuickPointer(code, fmt) {
+        if (!db) return;
+        db.ref('quick/' + fmt).transaction(cur => (cur === code ? null : cur));
+    }
+
+    function netLeaveRoom() {
+        if (!net.code) return;
+        const ref = net.roomRef;
+        const wasHost = net.isHost;
+        const key = net.mySlotKey;
+        const code = net.code;
+        const fmt = config.format || '1v1';
+        netDetachAll();
+        if (!db || !ref) return;
+        if (wasHost) {
+            ref.onDisconnect().cancel();
+            ref.remove();
+            clearQuickPointer(code, fmt);
+        } else if (key) {
+            const sref = ref.child('slots/' + key);
+            sref.onDisconnect().cancel();
+            sref.update({ uid: '', name: '', ready: false });
+        }
+    }
+
+    function netQuickMatch() {
+        const fmt = config.format || '1v1';
+        return db.ref('quick/' + fmt).once('value').then(s => {
+            const code = s.val();
+            if (!code) throw new Error('boş');
+            return netJoinRoom(code);
+        }).catch(() => netCreateRoom(fmt, true).then(code => { setLobbyMsg('Rakip bekleniyor… Oda: ' + code); return code; }));
+    }
+
+    // ---------------- lobi eylemleri ----------------
+    function netUpdateMySlot(patch) {
+        if (!db || !net.code || !net.mySlotKey) return;
+        db.ref('rooms/' + net.code + '/slots/' + net.mySlotKey).update(patch);
+    }
+
+    function netHostSetBot(slot, on) {
+        if (!db || !net.code || !net.isHost || !slot) return;
+        const ref = db.ref('rooms/' + net.code + '/slots/' + slot.key);
+        if (on) {
+            if (slot.uid || slot.isBot) return;
+            const teamBotCount = lobbyState.slots.filter(s => s.team === slot.team && s.isBot).length;
+            const name = slot.team === 'blue'
+                ? (teamBotCount === 0 ? 'MaviYıldız' : 'MaviBot' + (teamBotCount + 1))
+                : (teamBotCount === 0 ? 'KızılFırtına' : 'KızılBot' + (teamBotCount + 1));
+            ref.update({ isBot: true, name, uid: '', ready: true, diff: config.difficulty || 'medium' });
+            setLobbyMsg((slot.team === 'blue' ? 'Mavi' : 'Kırmızı') + ' takıma ' + name + ' eklendi.');
+        } else {
+            if (!slot.isBot) return;
+            ref.update({ isBot: false, name: '', ready: false });
+            setLobbyMsg(slot.name + ' odadan çıkarıldı.');
+        }
+    }
+
+    function netSwapTeam() {
+        if (!db || !net.code || !net.mySlotKey) return;
+        const mine = lobbyState.slots.find(s => s.key === net.mySlotKey);
+        if (!mine) return;
+        const otherTeam = mine.team === 'blue' ? 'red' : 'blue';
+        const target = lobbyState.slots.find(s => s.team === otherTeam && !s.uid && !s.isBot);
+        if (!target) { setLobbyMsg('Diğer takımda boş yer yok.'); return; }
+        const oldKey = net.mySlotKey;
+        const tref = db.ref('rooms/' + net.code + '/slots/' + target.key);
+        const known = emptySlotData(target.key);
+        tref.transaction(cur => {
+            const base = cur === null ? known : cur;
+            if (!base.uid && !base.isBot) {
+                return Object.assign({}, base, { uid: myUid, name: getHumanNickname(), ready: true, avatar: config.avatarType });
+            }
+            return undefined;
+        }).then(res => {
+            if (!res.committed) { setLobbyMsg('Yer az önce doldu.'); return; }
+            const oref = db.ref('rooms/' + net.code + '/slots/' + oldKey);
+            oref.onDisconnect().cancel();
+            oref.update({ uid: '', name: '', ready: false });
+            tref.onDisconnect().update({ uid: '', name: '', ready: false });
+            net.mySlotKey = target.key;
+        });
     }
 
     function renderLobby() {
         document.getElementById('lobby-room-code').textContent = lobbyState.roomCreated ? lobbyState.roomCode : '—';
         const container = document.getElementById('lobby-roster');
         if (!lobbyState.roomCreated) {
-            container.innerHTML = '<div class="col-span-full text-xs font-bold text-sky-900 bg-white/80 rounded-xl px-3 py-2 border border-sky-200">Henüz oda kurulmadı. <b>Yeni Oda</b>\'ya basıp format seçin veya kod girip <b>Katıl</b>\'a basın.</div>';
+            container.innerHTML = '<div class="col-span-full text-xs font-bold text-sky-900 bg-white/80 rounded-xl px-3 py-2 border border-sky-200">Henüz oda kurulmadı. <b>Yeni Oda</b>\'ya basıp format seçin, kod girip <b>Katıl</b>\'a basın ya da <b>Hızlı Eşleşme</b> kullanın.</div>';
             return;
         }
         container.innerHTML = lobbyState.slots.map((s, idx) => {
             const isBlue = s.team === 'blue';
             const teamLabel = isBlue ? 'MAVİ' : 'KIRMIZI';
+            const teamClass = isBlue ? 'bg-blue-50 border-blue-300 text-blue-900' : 'bg-red-50 border-red-300 text-red-900';
 
-            if (!s.isHuman && !s.isBot) {
+            if (!s.uid && !s.isBot) {
                 const emptyBorder = isBlue ? 'bg-blue-50/70 border-dashed border-blue-300 text-blue-900' : 'bg-red-50/70 border-dashed border-red-300 text-red-900';
-                return `
+                if (net.isHost) {
+                    return `
                     <button type="button" data-slot-add-bot="${idx}" class="rounded-xl border-2 p-2 ${emptyBorder} hover:bg-white transition flex flex-col justify-between gap-1 text-left cursor-pointer">
                         <div class="font-black text-slate-500">Boş Yer (${teamLabel})</div>
-                        <div class="inline-flex items-center justify-center gap-1 py-1 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-black shadow-sm">
-                            <span>+ Bot Ekle</span>
-                        </div>
-                    </button>
-                `;
+                        <div class="inline-flex items-center justify-center gap-1 py-1 px-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-black shadow-sm"><span>+ Bot Ekle</span></div>
+                    </button>`;
+                }
+                return `
+                    <div class="rounded-xl border-2 p-2 ${emptyBorder} flex flex-col justify-between gap-1">
+                        <div class="font-black text-slate-500">Boş Yer (${teamLabel})</div>
+                        <div class="text-[10px] font-bold text-slate-500">Oyuncu bekleniyor…</div>
+                    </div>`;
             }
-
-            const teamClass = isBlue
-                ? 'bg-blue-50 border-blue-300 text-blue-900'
-                : 'bg-red-50 border-red-300 text-red-900';
 
             if (s.isBot) {
+                const clickable = net.isHost;
                 return `
-                    <div data-slot-remove-bot="${idx}" title="Botu çıkarmak için tıklayın" class="rounded-xl border-2 p-2 ${teamClass} hover:border-rose-500 hover:bg-rose-50 transition flex flex-col justify-between gap-1 cursor-pointer">
+                    <div ${clickable ? `data-slot-remove-bot="${idx}" title="Botu çıkarmak için tıklayın"` : ''} class="rounded-xl border-2 p-2 ${teamClass} ${clickable ? 'hover:border-rose-500 hover:bg-rose-50 cursor-pointer' : ''} transition flex flex-col justify-between gap-1">
                         <div class="flex items-center justify-between gap-1">
-                            <span class="font-black truncate">🤖 ${s.name}</span>
-                            <span class="text-[10px] font-black px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-300">Bot Çıkar ×</span>
+                            <span class="font-black truncate">🤖 ${esc(s.name)}</span>
+                            ${clickable ? '<span class="text-[10px] font-black px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 border border-rose-300">Bot Çıkar ×</span>' : ''}
                         </div>
-                        <div class="flex items-center justify-between text-[10px] font-bold">
-                            <span>${teamLabel} • BOT</span>
-                            <span class="text-slate-600">Tıkla: Çıkar</span>
-                        </div>
-                    </div>
-                `;
+                        <div class="text-[10px] font-bold">${teamLabel} • BOT</div>
+                    </div>`;
             }
 
-            if (s.isRemote) {
-                return `
-                    <div class="rounded-xl border-2 p-2 ${teamClass} flex flex-col justify-between gap-1">
-                        <div class="flex items-center justify-between gap-1">
-                            <span class="font-black truncate">🌐 ${s.name}</span>
-                            ${s.isHost ? '<span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-200 text-amber-900">KURUCU</span>' : ''}
-                        </div>
-                        <div class="flex items-center justify-between text-[10px] font-bold">
-                            <span>${teamLabel} • ARKADAŞ</span>
-                            <span class="text-emerald-700">${s.ready ? 'HAZIR ✓' : 'BEKLİYOR'}</span>
-                        </div>
-                    </div>
-                `;
-            }
-
+            const isMine = s.uid === myUid;
+            const isHostSlot = s.uid === net.hostId;
             return `
                 <div class="rounded-xl border-2 p-2 ${teamClass} flex flex-col justify-between gap-1">
-                    <div class="flex items-center justify-between gap-1">
-                        <span class="font-black truncate">${s.name}</span>
-                        ${s.isHost ? '<span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-200 text-amber-900">KURUCU</span>' : ''}
-                    </div>
+                    <div class="font-black truncate">${isHostSlot ? '👑 ' : ''}${esc(s.name)}</div>
                     <div class="flex items-center justify-between text-[10px] font-bold">
-                        <span>${teamLabel} • 👤 SİZ</span>
-                        <span class="text-emerald-700">${s.ready ? 'HAZIR ✓' : 'BEKLİYOR'}</span>
+                        <span>${teamLabel} • ${isMine ? '👤 SİZ' : '👤 OYUNCU'}</span>
+                        <span class="${s.ready ? 'text-emerald-700' : 'text-amber-700'}">${s.ready ? 'HAZIR' : 'BEKLİYOR'}</span>
                     </div>
+                    ${isMine ? `
                     <div class="flex gap-1 mt-0.5">
                         <button type="button" data-slot-swap="${idx}" class="px-1.5 py-0.5 rounded bg-white/90 border border-slate-300 text-[10px] font-bold hover:bg-white cursor-pointer">Takım Değiştir</button>
                         <button type="button" data-slot-ready="${idx}" class="px-1.5 py-0.5 rounded bg-white/90 border border-slate-300 text-[10px] font-bold hover:bg-white cursor-pointer">${s.ready ? 'Hazır ✓' : 'Hazır Yap'}</button>
-                    </div>
-                </div>
-            `;
+                    </div>` : ''}
+                </div>`;
         }).join('');
 
         container.querySelectorAll('[data-slot-add-bot]').forEach(btn => {
-            btn.addEventListener('click', () => addBotToSlot(Number(btn.dataset.slotAddBot)));
+            btn.addEventListener('click', () => netHostSetBot(lobbyState.slots[Number(btn.dataset.slotAddBot)], true));
         });
-
         container.querySelectorAll('[data-slot-remove-bot]').forEach(card => {
-            card.addEventListener('click', () => removeBotFromSlot(Number(card.dataset.slotRemoveBot)));
+            card.addEventListener('click', () => netHostSetBot(lobbyState.slots[Number(card.dataset.slotRemoveBot)], false));
         });
-
         container.querySelectorAll('[data-slot-swap]').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const i = Number(btn.dataset.slotSwap);
-                const humanSlot = lobbyState.slots[i];
-                const targetTeam = humanSlot.team === 'blue' ? 'red' : 'blue';
-                const targetSlot = lobbyState.slots.find(s => s.team === targetTeam && !s.isHuman);
-                if (targetSlot) {
-                    const prevTeam = humanSlot.team;
-                    humanSlot.team = targetTeam;
-                    targetSlot.team = prevTeam;
-                } else {
-                    humanSlot.team = targetTeam;
-                }
-                syncConfigBotsFromLobby();
-                renderLobby();
-                if (isOnlineRoomActive()) {
-                    const newX = targetTeam === 'blue' ? 300 : (WORLD_W - 300);
-                    await fbRequest(`rooms/${onlineSync.roomCode}/players/${clientId}`, "PATCH", {
-                        team: targetTeam,
-                        x: newX,
-                        aimAngle: targetTeam === 'blue' ? -0.35 : -(Math.PI - 0.35)
-                    }).catch(() => {});
-                }
+            btn.addEventListener('click', netSwapTeam);
+        });
+        container.querySelectorAll('[data-slot-ready]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const s = lobbyState.slots[Number(btn.dataset.slotReady)];
+                if (s) netUpdateMySlot({ ready: !s.ready });
+            });
+        });
+    }
+
+    // ---------------- maç başlatma ----------------
+    function netHostStartMatch() {
+        if (!db || !net.code || !net.isHost) return Promise.resolve();
+        const ref = net.roomRef;
+        const matchId = 'm' + Date.now().toString(36) + Math.floor(Math.random() * 1e3);
+        return ref.child('ev').remove()
+            .then(() => ref.child('live').remove())
+            .then(() => ref.child('meta').update({ status: 'playing', matchId }))
+            .then(() => clearQuickPointer(net.code, config.format || '1v1'));
+    }
+
+    function beginOnlineMatch(matchId) {
+        if (!net.code) return;
+        if (net.detachMatch) { net.detachMatch(); net.detachMatch = null; }
+        sfx.init();
+        clampBotCounts();
+
+        net.matchId = matchId;
+        net.active = true;
+        net.lastSend = 0;
+
+        state.matchToken++;
+        state.round = 1;
+        state.blueScore = 0;
+        state.redScore = 0;
+        state.players = [];
+
+        let idc = 1;
+        const botSkins = { blue: ['polarbear', 'arcticfox'], red: ['penguin', 'arcticrabbit'] };
+        ['blue', 'red'].forEach(team => {
+            const list = lobbyState.slots.filter(s => s.team === team && (s.uid || s.isBot));
+            const pos = getSpawnPositions(list.length, team);
+            list.forEach((s, i) => {
+                const mine = !s.isBot && s.uid === myUid;
+                const ownedBot = s.isBot && net.isHost;
+                const p = new SnowFighterCharacter({
+                    id: idc++,
+                    name: s.name || (s.isBot ? 'Bot' : 'Oyuncu'),
+                    team,
+                    isHuman: mine,
+                    controlScheme: mine ? 'p1' : (s.isBot ? 'ai' : 'remote'),
+                    x: pos[i] ?? (team === 'blue' ? 260 : WORLD_W - 260),
+                    avatarType: s.isBot ? botSkins[team][i % 2] : (s.avatar || 'polarbear'),
+                    aiDifficulty: s.aiDifficulty || 'medium'
+                });
+                p.pid = s.key;
+                p.humanSlot = !s.isBot;
+                p.isRemote = !(mine || ownedBot);
+                state.players.push(p);
             });
         });
 
-        container.querySelectorAll('[data-slot-ready]').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const i = Number(btn.dataset.slotReady);
-                lobbyState.slots[i].ready = !lobbyState.slots[i].ready;
-                renderLobby();
-                if (isOnlineRoomActive()) {
-                    await fbRequest(`rooms/${onlineSync.roomCode}/players/${clientId}`, "PATCH", {
-                        ready: lobbyState.slots[i].ready
-                    }).catch(() => {});
+        // olay + canlı durum dinleyicileri
+        const evRef = net.roomRef.child('ev');
+        const liveRef = net.roomRef.child('live');
+        const evCb = evRef.on('child_added', snap => handleNetEvent(snap.val()));
+        const liveAdd = liveRef.on('child_added', snap => applyLive(snap.key, snap.val()));
+        const liveChg = liveRef.on('child_changed', snap => applyLive(snap.key, snap.val()));
+        net.detachMatch = () => {
+            evRef.off('child_added', evCb);
+            liveRef.off('child_added', liveAdd);
+            liveRef.off('child_changed', liveChg);
+        };
+
+        document.getElementById('main-menu').classList.add('hidden');
+        document.getElementById('gameover-modal').classList.add('hidden');
+        document.getElementById('hud').classList.remove('hidden');
+        enterMobileMatchImmersion();
+        syncTouchVisibility();
+        setupRound();
+    }
+
+    // ---------------- ağ trafiği ----------------
+    function netSend(ev) {
+        if (!net.active || !net.roomRef) return;
+        ev.m = net.matchId;
+        ev.f = myUid;
+        net.roomRef.child('ev').push(ev);
+    }
+
+    function netTick(now) {
+        if (!net.active || !net.roomRef) return;
+        if (now - net.lastSend < NET_SEND_MS) return;
+        net.lastSend = now;
+        const upd = {};
+        let any = false;
+        for (const p of state.players) {
+            if (p.isRemote || p.disconnected || !p.pid) continue;
+            upd[p.pid] = p.packNet();
+            any = true;
+        }
+        if (any) net.roomRef.child('live').update(upd);
+    }
+
+    function applyLive(pid, pkt) {
+        if (!net.active || !pkt || pkt.m !== net.matchId || pkt.rd !== state.round) return;
+        const p = playerByPid(pid);
+        if (!p || !p.isRemote || p.disconnected) return;
+        p.net = pkt;
+        const prevHp = p.hp;
+        if (pkt.hp !== prevHp) {
+            p.hp = pkt.hp;
+            if (prevHp > 0 && pkt.hp <= 0) {
+                spawnSnowPuff(p.x, p.y - 42, 35, p.team === 'blue' ? '#60a5fa' : '#f87171');
+                spawnFloatingText(p.x, p.y - 102, 'NAKAVT!', '#fbbf24');
+                triggerShake(0.28, 10);
+            }
+            updateHUD();
+        }
+    }
+
+    function handleNetEvent(e) {
+        if (!e || !net.active || e.m !== net.matchId) return;
+        const mine = e.f === myUid;
+        switch (e.t) {
+            case 'sb': {
+                if (mine) return;
+                const owner = playerByPid(e.pid);
+                if (!owner || state.screen === 'roundEnd' || state.screen === 'gameOver') return;
+                state.snowballs.push({
+                    sid: e.sid, owner, team: owner.team,
+                    x: e.x, y: e.y, vx: e.vx, vy: e.vy,
+                    radius: e.r, damage: e.dm, isMega: !!e.mg, isFreeze: !!e.fr,
+                    rot: 0, trail: []
+                });
+                owner.stats.throws++;
+                owner.scaleX = 1.18; owner.scaleY = 0.86;
+                sfx.playThrow(e.mg ? 1 : 0.7);
+                break;
+            }
+            case 'hit': {
+                const shooter = playerByPid(e.by);
+                if (shooter && shooter.stats && e.d > 0) { shooter.stats.hits++; shooter.stats.damage += e.d; }
+                if (mine) return;
+                const victim = playerByPid(e.pid);
+                let bx = null, by = null;
+                const i = state.snowballs.findIndex(b => b.sid === e.sid);
+                if (i >= 0) { bx = state.snowballs[i].x; by = state.snowballs[i].y; state.snowballs.splice(i, 1); }
+                if (victim) {
+                    const hb = victim.getHitbox();
+                    spawnSnowPuff(bx ?? hb.x, by ?? hb.y, e.mg ? 26 : 16, '#ffffff');
+                    victim.hurtTimer = 0.35;
+                    victim.scaleX = 0.76; victim.scaleY = 1.28;
+                    if (e.d > 0) spawnFloatingText(victim.x, victim.y - 84, '-' + e.d, '#f87171');
+                    if (e.fr) spawnFloatingText(victim.x, victim.y - 102, '🥶 BUZ TUTTU!', '#7dd3fc');
+                    sfx.playHit(!!e.mg);
+                    triggerShake(0.14, e.mg ? 8 : 4);
                 }
-            });
-        });
+                break;
+            }
+            case 'box': {
+                if (mine) return;
+                const pw = MYSTERY_POWERS.find(m => m.type === e.ty);
+                if (!pw || state.mysteryBoxes.some(b => b.id === e.id)) return;
+                state.mysteryBoxes.push({ ...pw, id: e.id, x: e.x, y: e.y, size: 46, bob: rand(0, Math.PI * 2), life: 14 });
+                break;
+            }
+            case 'pick': {
+                if (mine) return;
+                const i = state.mysteryBoxes.findIndex(b => b.id === e.id);
+                const pw = MYSTERY_POWERS.find(m => m.type === e.ty);
+                const box = i >= 0 ? state.mysteryBoxes.splice(i, 1)[0] : (pw ? { ...pw, x: MOUND_X, y: 260 } : null);
+                const who = playerByPid(e.pid);
+                if (box && who) grantMysteryPower(who, box);
+                break;
+            }
+            case 'ic': {
+                if (mine) return;
+                if (state.icicles.some(c => c.id === e.id)) return;
+                state.icicles.push({ id: e.id, x: e.x, y: 42, vy: 140, length: 44, halfWidth: 14, damage: 22, targetTeam: e.tt });
+                break;
+            }
+            case 'ichit': {
+                if (mine) return;
+                const i = state.icicles.findIndex(c => c.id === e.id);
+                let ix = null, iy = null;
+                if (i >= 0) { ix = state.icicles[i].x; iy = state.icicles[i].y; state.icicles.splice(i, 1); }
+                const victim = playerByPid(e.pid);
+                if (victim) {
+                    const hb = victim.getHitbox();
+                    spawnSnowPuff(ix ?? hb.x, iy ?? hb.y, 18, '#7dd3fc');
+                    victim.hurtTimer = 0.35;
+                    if (e.d > 0) spawnFloatingText(victim.x, victim.y - 84, '-' + e.d, '#f87171');
+                    sfx.playHit(true);
+                    triggerShake(0.16, 6);
+                }
+                break;
+            }
+            case 'emo': {
+                if (mine) return;
+                const who = playerByPid(e.pid);
+                if (who) spawnFloatingText(who.x, who.y - 140, e.e, '#ffffff');
+                break;
+            }
+            case 're': {
+                if (mine || state.screen === 'roundEnd' || state.screen === 'gameOver') return;
+                state.blueScore = e.b;
+                state.redScore = e.r;
+                const finished = state.blueScore >= config.roundsToWin || state.redScore >= config.roundsToWin;
+                runRoundEndSequence(e.w, finished, false);
+                break;
+            }
+            case 'rs': {
+                if (mine || state.screen === 'gameOver') return;
+                hideBanner();
+                state.round = e.n;
+                setupRound();
+                break;
+            }
+            case 'over': {
+                if (mine) return;
+                hideBanner();
+                showGameOver(e.w);
+                break;
+            }
+        }
     }
 
     function refreshMenuFlow() {
@@ -2858,15 +2841,7 @@
         return side === 'blue' ? [210, 440] : [WORLD_W - 210, WORLD_W - 440];
     }
 
-    async function startMatch() {
-        if (config.playersMode === 'online' && onlineSync.roomCode && !onlineSync.isHost) {
-            document.getElementById('menu-hint-msg').textContent = '⏳ Oda sahibi maçı başlatana kadar bekleyin...';
-            return;
-        }
-        return _startMatchInternal();
-    }
-
-    function _startMatchInternal() {
+    function startMatch() {
         const nickInput = document.getElementById('player-nick');
         const nick = getRawNickname();
         if (!nick) {
@@ -2898,48 +2873,41 @@
             return;
         }
 
+        if (config.playersMode === 'online') {
+            const hint = document.getElementById('menu-hint-msg');
+            if (!net.isHost) {
+                hint.textContent = '⏳ Maçı oda kurucusu (👑) başlatır. Hazır ol!';
+                return;
+            }
+            const parts = lobbyState.slots.filter(x => x.uid || x.isBot);
+            if (!parts.some(x => x.team === 'blue') || !parts.some(x => x.team === 'red')) {
+                hint.textContent = '⚠️ Her takımda en az bir oyuncu ya da bot olmalı! (Boş yerlere + Bot Ekle)';
+                return;
+            }
+            if (parts.some(x => x.uid && !x.ready)) {
+                hint.textContent = '⚠️ Tüm oyuncular HAZIR olmalı.';
+                return;
+            }
+            hint.textContent = 'Maç başlatılıyor…';
+            netHostStartMatch().catch(err => {
+                console.error(err);
+                hint.textContent = '⚠️ Maç başlatılamadı: ' + (err && err.message ? err.message : err);
+            });
+            return;
+        }
+
         sfx.init();
         clampBotCounts();
 
+        state.matchToken++;
         state.round = 1;
         state.blueScore = 0;
         state.redScore = 0;
         state.players = [];
 
-        const isOnline = config.playersMode === 'online';
         const is2v2 = config.format === '2v2';
 
-        if (isOnline && lobbyState.roomCreated) {
-            const blues = lobbyState.slots.filter(s => s.team === 'blue' && (s.isHuman || s.isBot));
-            const reds = lobbyState.slots.filter(s => s.team === 'red' && (s.isHuman || s.isBot));
-            const bPos = getSpawnPositions(blues.length, 'blue');
-            const rPos = getSpawnPositions(reds.length, 'red');
-
-            blues.forEach((s, i) => {
-                state.players.push(new SnowFighterCharacter({
-                    id: i + 1,
-                    name: s.isHuman ? nick : s.name,
-                    team: 'blue',
-                    isHuman: s.isHuman,
-                    controlScheme: s.isHuman ? 'p1' : 'ai',
-                    x: bPos[i] ?? 260,
-                    avatarType: s.isHuman ? config.avatarType : 'polarbear',
-                    aiDifficulty: s.aiDifficulty || config.difficulty || 'medium'
-                }));
-            });
-            reds.forEach((s, i) => {
-                state.players.push(new SnowFighterCharacter({
-                    id: 10 + i,
-                    name: s.isHuman ? nick : s.name,
-                    team: 'red',
-                    isHuman: s.isHuman,
-                    controlScheme: s.isHuman ? 'p2' : 'ai',
-                    x: rPos[i] ?? (WORLD_W - 260),
-                    avatarType: s.isHuman ? config.avatarType : 'penguin',
-                    aiDifficulty: s.aiDifficulty || config.difficulty || 'medium'
-                }));
-            });
-        } else if (!is2v2) {
+        if (!is2v2) {
             state.players.push(new SnowFighterCharacter({
                 id: 1, name: nick, team: 'blue', isHuman: true, controlScheme: 'p1', x: 300, avatarType: config.avatarType
             }));
@@ -2959,16 +2927,6 @@
             state.players.push(new SnowFighterCharacter({
                 id: 4, name: 'Kızıl Tavşan', team: 'red', isHuman: false, controlScheme: 'ai', x: WORLD_W - 440, avatarType: 'arcticrabbit', aiDifficulty: config.difficulty
             }));
-        }
-
-        if (isOnlineRoomActive() && onlineSync.isHost) {
-            fbRequest(`rooms/${onlineSync.roomCode}`, "PATCH", {
-                status: "playing",
-                round: state.round,
-                blueScore: state.blueScore,
-                redScore: state.redScore,
-                snowballs: {}
-            }).catch(() => {});
         }
 
         document.getElementById('main-menu').classList.add('hidden');
@@ -2996,13 +2954,15 @@
 
         blues.forEach((p, i) => p.reset(bPos[i] ?? 260));
         reds.forEach((p, i) => p.reset(rPos[i] ?? (WORLD_W - 260)));
+        state.players.forEach(p => { if (p.disconnected) p.hp = 0; });
 
         updateHUD();
         state.screen = 'roundIntro';
         showBanner(`${state.round}. ROUND BAŞLIYOR!`, 'AT tuşuna basılı tut, eksen x\'ten y\'ye ilerlesin, bırakınca fırlat!', 'intro');
 
+        const token = state.matchToken;
         setTimeout(() => {
-            if (state.screen === 'roundIntro') {
+            if (token === state.matchToken && state.screen === 'roundIntro') {
                 hideBanner();
                 state.screen = 'playing';
             }
@@ -3011,47 +2971,61 @@
 
     function checkRoundEnd(timeExpired = false) {
         if (state.screen !== 'playing') return;
+        if (net.active && !net.isHost) return;   // online'da turu sadece kurucu bitirir
 
         const blueAlive = state.players.some(p => p.team === 'blue' && p.isAlive);
         const redAlive = state.players.some(p => p.team === 'red' && p.isAlive);
 
         if (!blueAlive || !redAlive || timeExpired) {
-            state.screen = 'roundEnd';
-            let winnerTeam = 'blue';
-
-            if (!blueAlive && redAlive) winnerTeam = 'red';
-            else if (!redAlive && blueAlive) winnerTeam = 'blue';
+            let winnerTeam;
+            if (!blueAlive && !redAlive) winnerTeam = 'draw';
+            else if (!blueAlive) winnerTeam = 'red';
+            else if (!redAlive) winnerTeam = 'blue';
             else {
-                const blueHp = state.players.filter(p => p.team === 'blue').reduce((s, p) => s + p.hp, 0);
-                const redHp = state.players.filter(p => p.team === 'red').reduce((s, p) => s + p.hp, 0);
-                winnerTeam = blueHp >= redHp ? 'blue' : 'red';
+                const blueHp = state.players.filter(p => p.team === 'blue').reduce((sum, p) => sum + p.hp, 0);
+                const redHp = state.players.filter(p => p.team === 'red').reduce((sum, p) => sum + p.hp, 0);
+                winnerTeam = blueHp > redHp ? 'blue' : (redHp > blueHp ? 'red' : 'draw');
             }
 
             if (winnerTeam === 'blue') state.blueScore++;
-            else state.redScore++;
-
-            updateHUD();
-            sfx.playCheer();
+            else if (winnerTeam === 'red') state.redScore++;
 
             const finishedMatch = state.blueScore >= config.roundsToWin || state.redScore >= config.roundsToWin;
-            const nextRoundNum = state.round + 1;
-            const title = winnerTeam === 'blue' ? 'MAVİ TAKIM ROUND\'U ALDI!' : 'KIRMIZI TAKIM ROUND\'U ALDI!';
-            const subtitle = finishedMatch
-                ? `Skor: Mavi ${state.blueScore} - ${state.redScore} Kırmızı • Şampiyonluk belli oldu!`
-                : `Skor: Mavi ${state.blueScore} - ${state.redScore} Kırmızı • Yeni round (${nextRoundNum}. round) başlıyor...`;
-
-            showBanner(title, subtitle, winnerTeam);
-
-            setTimeout(() => {
-                hideBanner();
-                if (finishedMatch) {
-                    showGameOver(winnerTeam);
-                } else {
-                    state.round = nextRoundNum;
-                    setupRound();
-                }
-            }, 2200);
+            if (net.active) netSend({ t: 're', w: winnerTeam, b: state.blueScore, r: state.redScore });
+            runRoundEndSequence(winnerTeam, finishedMatch, true);
         }
+    }
+
+    // isAuthority: tek kişilikte ve online'da kurucuda true; diğer oyuncular kurucunun olaylarını bekler
+    function runRoundEndSequence(winnerTeam, finishedMatch, isAuthority) {
+        state.screen = 'roundEnd';
+        updateHUD();
+        sfx.playCheer();
+
+        const nextRoundNum = state.round + 1;
+        let title, theme;
+        if (winnerTeam === 'blue') { title = 'MAVİ TAKIM ROUND\'U ALDI!'; theme = 'blue'; }
+        else if (winnerTeam === 'red') { title = 'KIRMIZI TAKIM ROUND\'U ALDI!'; theme = 'red'; }
+        else { title = 'BERABERE! 🤝'; theme = 'intro'; }
+        const subtitle = finishedMatch
+            ? `Skor: Mavi ${state.blueScore} - ${state.redScore} Kırmızı • Şampiyonluk belli oldu!`
+            : `Skor: Mavi ${state.blueScore} - ${state.redScore} Kırmızı • Yeni round (${nextRoundNum}. round) başlıyor...`;
+        showBanner(title, subtitle, theme);
+
+        if (!isAuthority) return;
+        const token = state.matchToken;
+        setTimeout(() => {
+            if (token !== state.matchToken) return;
+            hideBanner();
+            if (finishedMatch) {
+                if (net.active) netSend({ t: 'over', w: winnerTeam });
+                showGameOver(winnerTeam);
+            } else {
+                state.round = nextRoundNum;
+                if (net.active) netSend({ t: 'rs', n: state.round });
+                setupRound();
+            }
+        }, 2200);
     }
 
     function showGameOver(winnerTeam) {
@@ -3072,7 +3046,7 @@
             const acc = p.stats.throws > 0 ? Math.round((p.stats.hits / p.stats.throws) * 100) : 0;
             return `
                 <div class="gameover-stat-row flex items-center justify-between bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
-                    <div class="flex items-center gap-2">${badge}<span class="font-extrabold text-slate-800">${p.name}</span></div>
+                    <div class="flex items-center gap-2">${badge}<span class="font-extrabold text-slate-800">${esc(p.name)}</span></div>
                     <div class="flex items-center gap-3 text-xs font-bold text-slate-600">
                         <span>🎯 İsabet: <b>%${acc}</b></span>
                         <span>💥 Hasar: <b>${p.stats.damage}</b></span>
@@ -3080,6 +3054,17 @@
                 </div>
             `;
         }).join('');
+
+        const rematch = document.getElementById('btn-rematch');
+        if (rematch) {
+            if (net.code && !net.isHost) {
+                rematch.disabled = true;
+                rematch.textContent = '⏳ Kurucu rövanşı başlatır';
+            } else {
+                rematch.disabled = false;
+                rematch.textContent = '🔄 Rövanş Yap';
+            }
+        }
 
         document.getElementById('gameover-modal').classList.remove('hidden');
     }
@@ -3163,17 +3148,25 @@
 
         if (state.screen !== 'playing') return;
 
+        // online'da uzaktaki oyuncuların ölümü paketle gelir; kurucu her karede turun bitip bitmediğine bakar
+        if (net.active && net.isHost) {
+            checkRoundEnd();
+            if (state.screen !== 'playing') return;
+        }
+
         state.roundTimer -= dt;
         document.getElementById('hud-timer').textContent = Math.max(0, Math.ceil(state.roundTimer));
         if (state.roundTimer <= 0) {
-            checkRoundEnd(true);
+            checkRoundEnd(true);   // online'da kurucu değilse hiçbir şey yapmaz, 're' olayını bekler
             return;
         }
 
-        state.boxSpawnTimer -= dt;
-        if (state.boxSpawnTimer <= 0) {
-            spawnMysteryBox();
-            state.boxSpawnTimer = rand(6.5, 10.0);
+        if (!net.active || net.isHost) {
+            state.boxSpawnTimer -= dt;
+            if (state.boxSpawnTimer <= 0) {
+                spawnMysteryBox();
+                state.boxSpawnTimer = rand(6.5, 10.0);
+            }
         }
 
         for (let i = state.mysteryBoxes.length - 1; i >= 0; i--) {
@@ -3185,10 +3178,11 @@
                 continue;
             }
             for (const p of state.players) {
-                if (!p.isAlive) continue;
+                if (!p.isAlive || p.isRemote) continue;
                 const hb = p.getHitbox();
                 if (dist(hb.x, hb.y, box.x, box.y) < hb.r + box.size * 0.55) {
                     grantMysteryPower(p, box);
+                    if (net.active) netSend({ t: 'pick', id: box.id, pid: p.pid, ty: box.type });
                     state.mysteryBoxes.splice(i, 1);
                     break;
                 }
@@ -3196,24 +3190,8 @@
         }
 
         for (const p of state.players) {
-            if (p.isRemote) {
-                p.blinkTimer -= dt;
-                if (p.blinkTimer <= 0) {
-                    p.isBlinking = !p.isBlinking;
-                    p.blinkTimer = p.isBlinking ? 0.12 : rand(2.0, 4.5);
-                }
-                if (p.hurtTimer > 0) p.hurtTimer -= dt;
-                if (p.laughTimer > 0) {
-                    p.laughTimer = Math.max(0, p.laughTimer - dt);
-                    p.gigglePhase += dt * 42;
-                }
-                continue;
-            }
             p.update(dt);
-            p.updateCampIcicles(dt);
-        }
-        if (isOnlineRoomActive()) {
-            pushLocalPlayerStateToFirebase(false);
+            if (!p.isRemote) p.updateCampIcicles(dt);
         }
 
         for (let i = state.icicles.length - 1; i >= 0; i--) {
@@ -3230,12 +3208,13 @@
 
             let hitPlayer = false;
             for (const p of state.players) {
-                if (!p.isAlive) continue;
+                if (!p.isAlive || p.isRemote) continue;
                 const hb = p.getHitbox();
                 if (Math.abs(ic.x - hb.x) < hb.r + ic.halfWidth &&
                     ic.y >= hb.y - hb.r &&
                     ic.y - ic.length <= hb.y + hb.r) {
-                    p.takeHit({ damage: ic.damage, vx: 0, isFreeze: false, isMega: false, owner: null });
+                    const icDealt = p.takeHit({ damage: ic.damage, vx: 0, isFreeze: false, isMega: false, owner: null });
+                    if (net.active) netSend({ t: 'ichit', id: ic.id, pid: p.pid, d: icDealt || 0 });
                     updateHUD();
                     sfx.playHit(true);
                     spawnSnowPuff(ic.x, ic.y, 18, '#7dd3fc');
@@ -3279,8 +3258,9 @@
             let hitBox = false;
             for (let b = state.mysteryBoxes.length - 1; b >= 0; b--) {
                 const box = state.mysteryBoxes[b];
-                if (dist(sb.x, sb.y, box.x, box.y) < sb.radius + box.size * 0.6) {
+                if (!(sb.owner && sb.owner.isRemote) && dist(sb.x, sb.y, box.x, box.y) < sb.radius + box.size * 0.6) {
                     grantMysteryPower(sb.owner, box);
+                    if (net.active) netSend({ t: 'pick', id: box.id, pid: sb.owner.pid, ty: box.type });
                     state.mysteryBoxes.splice(b, 1);
                     hitBox = true;
                     break;
@@ -3292,10 +3272,13 @@
             }
 
             for (const p of state.players) {
-                if (!p.isAlive || p.team === sb.team) continue;
+                if (!p.isAlive || p.team === sb.team || p.isRemote) continue;
                 const hb = p.getHitbox();
                 if (dist(sb.x, sb.y, hb.x, hb.y) < sb.radius + hb.r) {
-                    p.takeHit(sb);
+                    const dealt = p.takeHit(sb);
+                    if (net.active) {
+                        netSend({ t: 'hit', sid: sb.sid, pid: p.pid, by: sb.owner ? sb.owner.pid : '', d: dealt || 0, mg: sb.isMega ? 1 : 0, fr: sb.isFreeze ? 1 : 0 });
+                    }
                     updateHUD();
                     sfx.playHit(sb.isMega);
                     spawnSnowPuff(sb.x, sb.y, sb.isMega ? 26 : 16, '#ffffff');
@@ -3414,11 +3397,13 @@
             drawSideArena(ctx);
             drawMysteryBoxes(ctx);
             drawIcicles(ctx);
-            for (const p of state.players) p.draw(ctx);
+            for (const p of state.players) { if (!p.disconnected) p.draw(ctx); }
             drawSnowballs(ctx);
             drawOverlayEffects(ctx);
             ctx.restore();
-        } catch (_) {}
+        } catch (err) {
+            if (!window.__renderErrShown) { window.__renderErrShown = true; console.error('Çizim hatası:', err); }
+        }
     }
 
     let lastTime = performance.now();
@@ -3427,8 +3412,11 @@
             const dt = Math.min(0.05, Math.max(0, (now - lastTime) / 1000));
             lastTime = now;
             update(dt);
+            netTick(now);
             render();
-        } catch (_) {}
+        } catch (err) {
+            if (!window.__loopErrShown) { window.__loopErrShown = true; console.error('Oyun döngüsü hatası:', err); }
+        }
         requestAnimationFrame(gameLoop);
     }
 
@@ -3439,6 +3427,11 @@
         }
     });
     window.addEventListener('keyup', e => { keys[e.code] = false; });
+    // Pencere odağı kaybolunca tuşlar basılı kalmasın
+    window.addEventListener('blur', () => {
+        for (const k in keys) keys[k] = false;
+        aimInput.mouseCharging = false;
+    });
 
     function clientToWorld(clientX, clientY) {
         const rect = canvas.getBoundingClientRect();
@@ -3468,8 +3461,8 @@
     window.addEventListener('mouseup', e => {
         if (e.button !== 0) return;
         if (aimInput.mouseCharging && state.screen === 'playing') {
-            const p1 = state.players.find(p => p.isHuman && p.isAlive);
-            if (p1 && p1.charging && p1.cooldown <= 0) {
+            const p1 = getLocalPlayer();
+            if (p1 && p1.isAlive && p1.charging && p1.cooldown <= 0) {
                 p1.fireSnowball();
                 p1.charging = false;
             }
@@ -3726,6 +3719,7 @@
             document.querySelectorAll('.avatar-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             config.avatarType = btn.dataset.avatar;
+            if (net.code) netUpdateMySlot({ avatar: config.avatarType });
         });
     });
 
@@ -3734,6 +3728,7 @@
             document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             config.playersMode = btn.dataset.players;
+            if (net.code) netLeaveRoom();
             if (config.playersMode === 'online') {
                 lobbyState.roomCreated = false;
                 lobbyState.slots = [];
@@ -3757,85 +3752,69 @@
             document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             config.format = btn.dataset.format;
-            if (config.playersMode === 'online' && lobbyState.roomCreated) {
-                buildLobbySlots();
-            }
             refreshMenuFlow();
         });
     });
 
     document.querySelectorAll('.room-fmt-btn').forEach(btn => {
         btn.addEventListener('click', () => {
+            if (lobbyState.roomCreated) return;   // oda kurulduktan sonra format değişmez
             const fmt = btn.dataset.roomFormat;
             config.format = fmt;
-            if (lobbyState.roomCreated) {
-                buildLobbySlots();
-            }
             refreshMenuFlow();
-            document.getElementById('lobby-status-msg').textContent = `Seçili oda formatı: ${fmt.toUpperCase()}. Şimdi Yeni Oda'ya basabilirsiniz.`;
+            setLobbyMsg(`Seçili oda formatı: ${fmt.toUpperCase()}. Şimdi Yeni Oda'ya basabilirsiniz.`);
         });
     });
 
-    document.getElementById('btn-create-room').addEventListener('click', async () => {
-        const chosenFmt = config.format || '1v1';
-        config.format = chosenFmt;
-        config.bots = { blue: 0, red: 0 };
-        config.botDifficulties = [];
-        const code = generateRoomCode();
-        document.getElementById('lobby-status-msg').textContent = 'Oda kuruluyor...';
-        try {
-            await createFirebaseRoom(code, chosenFmt);
+    let lobbyBusy = false;
+    function runLobbyAction(label, fn) {
+        if (!netEnsureReady()) return;
+        if (lobbyBusy) return;
+        lobbyBusy = true;
+        setLobbyMsg(label);
+        Promise.resolve().then(fn).then(code => {
+            if (code) setLobbyMsg(lobbyState.slots.length ? `Odadasın: ${code}. Arkadaşına bu kodu ver!` : '');
+        }).catch(err => {
+            console.error(err);
+            setLobbyMsg('⚠️ ' + (err && err.message ? err.message : 'İşlem başarısız.') +
+                (String(err && err.message).toLowerCase().includes('permission') ? ' (Firebase kurallarında okuma/yazma izni gerekli)' : ''));
+        }).finally(() => {
+            lobbyBusy = false;
             refreshMenuFlow();
-            document.getElementById('lobby-status-msg').textContent = `${chosenFmt.toUpperCase()} odası kuruldu: ${code}. Kodu arkadaşına gönderin!`;
-        } catch (err) {
-            document.getElementById('lobby-status-msg').textContent = `Oda kurulamadı: ${err.message}`;
-        }
+            renderLobby();
+        });
+    }
+
+    document.getElementById('btn-create-room').addEventListener('click', () => {
+        const fmt = config.format || '1v1';
+        runLobbyAction('Oda kuruluyor…', () => netCreateRoom(fmt, false));
     });
 
-    document.getElementById('btn-leave-room').addEventListener('click', async () => {
-        await leaveFirebaseRoomOnServer();
-        stopOnlineSync();
+    document.getElementById('btn-leave-room').addEventListener('click', () => {
+        netLeaveRoom();
         lobbyState.roomCreated = false;
         lobbyState.slots = [];
         config.bots = { blue: 0, red: 0 };
         config.botDifficulties = [];
         renderLobby();
         refreshMenuFlow();
-        document.getElementById('lobby-status-msg').textContent = 'Odadan ayrıldınız.';
+        setLobbyMsg('Odadan ayrıldınız.');
     });
 
-    document.getElementById('btn-join-room').addEventListener('click', async () => {
+    document.getElementById('btn-join-room').addEventListener('click', () => {
         const code = document.getElementById('join-room-input').value.trim().toUpperCase();
         if (code.length < 3) {
-            document.getElementById('lobby-status-msg').textContent = 'Lütfen en az 3 karakterlik bir oda kodu girin.';
+            setLobbyMsg('Lütfen en az 3 karakterlik bir oda kodu girin.');
             return;
         }
-        document.getElementById('lobby-status-msg').textContent = `${code} odasına bağlanılıyor...`;
-        try {
-            const res = await joinFirebaseRoom(code);
-            if (!res.ok) {
-                document.getElementById('lobby-status-msg').textContent = res.message;
-                return;
-            }
-            refreshMenuFlow();
-            document.getElementById('lobby-status-msg').textContent = `${code} odasına katıldınız! Oda sahibinin başlatmasını bekleyin.`;
-        } catch (err) {
-            document.getElementById('lobby-status-msg').textContent = `Bağlantı hatası: ${err.message}`;
-        }
+        if (net.code) { setLobbyMsg('Önce mevcut odadan çıkın.'); return; }
+        runLobbyAction(`${code} odasına bağlanılıyor…`, () => netJoinRoom(code));
     });
 
-    document.getElementById('btn-quick-match').addEventListener('click', async () => {
-        const chosenFmt = config.format || '1v1';
-        config.format = chosenFmt;
-        const code = generateRoomCode();
-        document.getElementById('lobby-status-msg').textContent = 'Hızlı eşleşme odası açılıyor...';
-        try {
-            await createFirebaseRoom(code, chosenFmt);
-            refreshMenuFlow();
-            document.getElementById('lobby-status-msg').textContent = `Eşleşme odası hazır! Kod: ${code}`;
-        } catch (err) {
-            document.getElementById('lobby-status-msg').textContent = `Bağlantı hatası: ${err.message}`;
-        }
+    document.getElementById('btn-quick-match').addEventListener('click', () => {
+        if (net.code) { setLobbyMsg('Önce mevcut odadan çıkın.'); return; }
+        if (!config.format) config.format = '1v1';
+        runLobbyAction('Rakip aranıyor…', () => netQuickMatch());
     });
 
     const nickField = document.getElementById('player-nick');
@@ -3847,7 +3826,7 @@
                 const nickErr = document.getElementById('nick-error-msg');
                 if (nickErr) nickErr.classList.add('hidden');
             }
-            if (config.playersMode === 'online' && lobbyState.roomCreated) buildLobbySlots();
+            if (net.code) netUpdateMySlot({ name: getHumanNickname() });
             if (config.nicknameConfirmed) refreshMenuFlow();
         });
         nickField.addEventListener('keydown', e => {
@@ -3932,16 +3911,20 @@
 
     document.querySelectorAll('.emoji-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            const p1 = state.players.find(p => p.isHuman);
+            const p1 = getLocalPlayer();
             if (p1) {
                 spawnFloatingText(p1.x, p1.y - 140, btn.dataset.emoji, '#ffffff');
+                if (net.active) netSend({ t: 'emo', pid: p1.pid, e: btn.dataset.emoji });
             }
         });
     });
 
     document.getElementById('btn-start').addEventListener('click', startMatch);
     document.getElementById('btn-rematch').addEventListener('click', () => {
-        enterMobileMatchImmersion();
+        if (net.code) {
+            if (net.isHost) netHostStartMatch().catch(err => console.error(err));
+            return;
+        }
         startMatch();
     });
     const retryLandscapeBtn = document.getElementById('btn-retry-landscape');
@@ -3955,14 +3938,18 @@
     });
 
     function returnToMenu() {
-        if (isOnlineRoomActive()) {
-            leaveFirebaseRoomOnServer();
-            stopOnlineSync();
-            lobbyState.roomCreated = false;
-            lobbyState.slots = [];
-        }
         setPadEditMode(false);
         exitMobileMatchImmersion();
+        state.matchToken++;          // bekleyen tur zamanlayıcıları iptal olsun
+        aimInput.mouseCharging = false;
+        if (net.code) {
+            netLeaveRoom();
+            lobbyState.roomCreated = false;
+            lobbyState.slots = [];
+            config.bots = { blue: 0, red: 0 };
+            config.botDifficulties = [];
+            renderLobby();
+        }
         state.screen = 'menu';
         hideBanner();
         document.getElementById('hud').classList.add('hidden');
