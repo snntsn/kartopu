@@ -655,7 +655,7 @@
 
     const WORLD_W = 1600;
     const WORLD_H = 720;
-    const GROUND_Y = 570;
+    const GROUND_Y = 535;
     const GRAVITY = 1950;
     const MOUND_X = WORLD_W / 2;
     const MOUND_W = 86;
@@ -763,6 +763,455 @@
         bots: { blue: 0, red: 1 },
         botDifficulties: ['medium']
     };
+
+
+    // =========================================================================
+    // FIREBASE REALTIME DATABASE ÇEVRİMİÇİ ODA & SENKRONİZASYON KATMANI
+    // =========================================================================
+    const FIREBASE_DB_URL = "https://kartopu-ddfbf-default-rtdb.firebaseio.com";
+    const clientId = "p_" + Math.random().toString(36).slice(2, 9);
+
+    const onlineSync = {
+        roomCode: null,
+        isHost: false,
+        pollTimer: null,
+        lastPushTime: 0,
+        seenSnowballIds: new Set(),
+        lastRoundSynced: 0,
+        lastMatchEndSynced: false
+    };
+
+    async function fbRequest(path, method = "GET", body = null) {
+        const cleanPath = path.replace(/^\/+|\/+$/g, "");
+        const url = `${FIREBASE_DB_URL}/${cleanPath}.json`;
+        const opts = { method };
+        if (body !== null) {
+            opts.headers = { "Content-Type": "application/json" };
+            opts.body = JSON.stringify(body);
+        }
+        const res = await fetch(url, opts);
+        if (!res.ok) {
+            throw new Error(`Firebase HTTP ${res.status}`);
+        }
+        return res.json();
+    }
+
+    function stopOnlineSync() {
+        if (onlineSync.pollTimer) {
+            clearInterval(onlineSync.pollTimer);
+            onlineSync.pollTimer = null;
+        }
+        onlineSync.roomCode = null;
+        onlineSync.isHost = false;
+        onlineSync.lastPushTime = 0;
+        onlineSync.seenSnowballIds.clear();
+        onlineSync.lastRoundSynced = 0;
+        onlineSync.lastMatchEndSynced = false;
+    }
+
+    function isOnlineRoomActive() {
+        return config.playersMode === "online" && !!onlineSync.roomCode;
+    }
+
+    async function leaveFirebaseRoomOnServer() {
+        const code = onlineSync.roomCode;
+        const wasHost = onlineSync.isHost;
+        if (!code) return;
+        try {
+            await fbRequest(`rooms/${code}/players/${clientId}`, "DELETE");
+            if (wasHost) {
+                const room = await fbRequest(`rooms/${code}`, "GET").catch(() => null);
+                const remaining = room && room.players ? Object.values(room.players) : [];
+                if (remaining.length > 0) {
+                    const nextHost = remaining[0];
+                    await fbRequest(`rooms/${code}`, "PATCH", {
+                        hostId: nextHost.id,
+                        [`players/${nextHost.id}/isHost`]: true
+                    });
+                } else {
+                    await fbRequest(`rooms/${code}`, "DELETE");
+                }
+            }
+        } catch (_) {}
+    }
+
+    async function createFirebaseRoom(code, format) {
+        await leaveFirebaseRoomOnServer();
+        stopOnlineSync();
+
+        const nick = getHumanNickname();
+        const fmt = format || "1v1";
+        const roomData = {
+            code,
+            format: fmt,
+            hostId: clientId,
+            createdAt: Date.now(),
+            status: "lobby",
+            round: 1,
+            blueScore: 0,
+            redScore: 0,
+            winnerTeam: null,
+            players: {
+                [clientId]: {
+                    id: clientId,
+                    name: nick,
+                    team: "blue",
+                    avatarType: config.avatarType || "polarbear",
+                    ready: true,
+                    isHost: true,
+                    x: 300,
+                    y: GROUND_Y,
+                    hp: 100,
+                    isDucking: false,
+                    aimAngle: -0.35,
+                    charging: false,
+                    updatedAt: Date.now()
+                }
+            },
+            snowballs: {}
+        };
+
+        await fbRequest(`rooms/${code}`, "PUT", roomData);
+        onlineSync.roomCode = code;
+        onlineSync.isHost = true;
+        config.format = fmt;
+        startRoomPolling(code);
+    }
+
+    async function joinFirebaseRoom(code) {
+        const room = await fbRequest(`rooms/${code}`, "GET");
+        if (!room) {
+            return { ok: false, message: `${code} kodlu oda bulunamadı. Arkadaşınızın oda kurduğundan emin olun.` };
+        }
+
+        await leaveFirebaseRoomOnServer();
+        stopOnlineSync();
+
+        const nick = getHumanNickname();
+        const fmt = room.format || "1v1";
+        const maxPerTeam = fmt === "2v2" ? 2 : 1;
+        const playersList = Object.values(room.players || {}).filter(p => p && p.id);
+        const bluePlayers = playersList.filter(p => p.team === "blue");
+        const redPlayers = playersList.filter(p => p.team === "red");
+
+        let assignedTeam = null;
+        if (redPlayers.length < maxPerTeam) {
+            assignedTeam = "red";
+        } else if (bluePlayers.length < maxPerTeam) {
+            assignedTeam = "blue";
+        } else {
+            return { ok: false, message: `${code} odası dolu.` };
+        }
+
+        config.format = fmt;
+        onlineSync.roomCode = code;
+        onlineSync.isHost = false;
+
+        const spawnPos = getSpawnPositions(
+            (assignedTeam === "blue" ? bluePlayers.length : redPlayers.length) + 1,
+            assignedTeam
+        );
+        const startX = spawnPos[spawnPos.length - 1] ?? (assignedTeam === "blue" ? 300 : WORLD_W - 300);
+
+        const myPlayer = {
+            id: clientId,
+            name: nick,
+            team: assignedTeam,
+            avatarType: config.avatarType || "polarbear",
+            ready: true,
+            isHost: false,
+            x: startX,
+            y: GROUND_Y,
+            hp: 100,
+            isDucking: false,
+            aimAngle: assignedTeam === "blue" ? -0.35 : -(Math.PI - 0.35),
+            charging: false,
+            updatedAt: Date.now()
+        };
+
+        await fbRequest(`rooms/${code}/players/${clientId}`, "PUT", myPlayer);
+        startRoomPolling(code);
+        return { ok: true, room };
+    }
+
+    function applyRoomPlayersToLobby(room) {
+        const fmt = room.format || config.format || "1v1";
+        config.format = fmt;
+        const maxPerTeam = fmt === "2v2" ? 2 : 1;
+
+        const playersObj = room.players || {};
+        const list = Object.values(playersObj).filter(p => p && p.id);
+        if (list.length > 0 && !list.some(p => p.id === room.hostId)) {
+            room.hostId = list[0].id;
+        }
+        onlineSync.isHost = room.hostId === clientId;
+
+        const blues = list.filter(p => p.team === "blue").slice(0, maxPerTeam);
+        const reds = list.filter(p => p.team === "red").slice(0, maxPerTeam);
+
+        const slots = [];
+        for (let i = 0; i < maxPerTeam; i++) {
+            const bp = blues[i];
+            if (bp) {
+                const isMe = bp.id === clientId;
+                slots.push({
+                    team: "blue",
+                    slotIndex: i,
+                    name: bp.name,
+                    isHuman: isMe,
+                    isRemote: !isMe,
+                    isBot: false,
+                    isHost: bp.id === room.hostId,
+                    controlScheme: isMe ? "p1" : "remote",
+                    ready: bp.ready !== false
+                });
+            } else {
+                slots.push(createEmptySlot("blue", i));
+            }
+        }
+        for (let i = 0; i < maxPerTeam; i++) {
+            const rp = reds[i];
+            if (rp) {
+                const isMe = rp.id === clientId;
+                slots.push({
+                    team: "red",
+                    slotIndex: i,
+                    name: rp.name,
+                    isHuman: isMe,
+                    isRemote: !isMe,
+                    isBot: false,
+                    isHost: rp.id === room.hostId,
+                    controlScheme: isMe ? "p2" : "remote",
+                    ready: rp.ready !== false
+                });
+            } else {
+                slots.push(createEmptySlot("red", i));
+            }
+        }
+
+        lobbyState.roomCode = room.code || onlineSync.roomCode;
+        lobbyState.roomCreated = true;
+        lobbyState.slots = slots;
+        config.bots = { blue: 0, red: 0 };
+        config.botDifficulties = [];
+        renderLobby();
+        refreshMenuFlow();
+    }
+
+    function buildPlayersFromFirebaseRoom(room) {
+        const playersList = Object.values(room.players || {}).filter(p => p && p.id);
+        const blues = playersList.filter(p => p.team === "blue");
+        const reds = playersList.filter(p => p.team === "red");
+        const bPos = getSpawnPositions(Math.max(1, blues.length), "blue");
+        const rPos = getSpawnPositions(Math.max(1, reds.length), "red");
+
+        const chars = [];
+        blues.forEach((p, idx) => {
+            const isMe = p.id === clientId;
+            const ch = new SnowFighterCharacter({
+                id: idx + 1,
+                name: p.name || "Mavi Oyuncu",
+                team: "blue",
+                isHuman: isMe,
+                controlScheme: isMe ? "p1" : "remote",
+                x: typeof p.x === "number" ? p.x : (bPos[idx] ?? 300),
+                avatarType: p.avatarType || "polarbear"
+            });
+            ch.remoteId = p.id;
+            ch.isRemote = !isMe;
+            ch.hp = typeof p.hp === "number" ? p.hp : 100;
+            ch.isDucking = !!p.isDucking;
+            ch.aimAngle = typeof p.aimAngle === "number" ? p.aimAngle : -0.35;
+            ch.charging = !!p.charging;
+            chars.push(ch);
+        });
+
+        reds.forEach((p, idx) => {
+            const isMe = p.id === clientId;
+            const ch = new SnowFighterCharacter({
+                id: 10 + idx,
+                name: p.name || "Kırmızı Oyuncu",
+                team: "red",
+                isHuman: isMe,
+                controlScheme: isMe ? "p2" : "remote",
+                x: typeof p.x === "number" ? p.x : (rPos[idx] ?? (WORLD_W - 300)),
+                avatarType: p.avatarType || "penguin"
+            });
+            ch.remoteId = p.id;
+            ch.isRemote = !isMe;
+            ch.hp = typeof p.hp === "number" ? p.hp : 100;
+            ch.isDucking = !!p.isDucking;
+            ch.aimAngle = typeof p.aimAngle === "number" ? p.aimAngle : -(Math.PI - 0.35);
+            ch.charging = !!p.charging;
+            chars.push(ch);
+        });
+
+        return chars;
+    }
+
+    function startOnlineMatchFromRoom(room) {
+        sfx.init();
+        state.round = Number(room.round) || 1;
+        state.blueScore = Number(room.blueScore) || 0;
+        state.redScore = Number(room.redScore) || 0;
+        state.players = buildPlayersFromFirebaseRoom(room);
+        onlineSync.seenSnowballIds.clear();
+        onlineSync.lastRoundSynced = state.round;
+        onlineSync.lastMatchEndSynced = false;
+
+        document.getElementById("main-menu").classList.add("hidden");
+        document.getElementById("gameover-modal").classList.add("hidden");
+        document.getElementById("hud").classList.remove("hidden");
+        enterMobileMatchImmersion();
+        syncTouchVisibility();
+        setupRound();
+    }
+
+    async function publishSnowballToFirebase(sb) {
+        if (!isOnlineRoomActive()) return;
+        const sbId = "sb_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7);
+        onlineSync.seenSnowballIds.add(sbId);
+        try {
+            await fbRequest(`rooms/${onlineSync.roomCode}/snowballs/${sbId}`, "PUT", {
+                id: sbId,
+                senderId: clientId,
+                team: sb.team,
+                x: sb.x,
+                y: sb.y,
+                vx: sb.vx,
+                vy: sb.vy,
+                radius: sb.radius,
+                damage: sb.damage,
+                isMega: !!sb.isMega,
+                isFreeze: !!sb.isFreeze,
+                createdAt: Date.now()
+            });
+        } catch (_) {}
+    }
+
+    function syncRemotePlayersFromRoom(room) {
+        const playersObj = room.players || {};
+        for (const p of state.players) {
+            if (!p.isRemote || !p.remoteId) continue;
+            const rp = playersObj[p.remoteId];
+            if (!rp) continue;
+
+            if (typeof rp.x === "number") {
+                p.x += (rp.x - p.x) * 0.65;
+            }
+            if (typeof rp.y === "number") {
+                p.y += (rp.y - p.y) * 0.65;
+            }
+            if (typeof rp.hp === "number") {
+                p.hp = rp.hp;
+            }
+            p.isDucking = !!rp.isDucking;
+            if (typeof rp.aimAngle === "number") {
+                p.aimAngle = rp.aimAngle;
+            }
+            p.charging = !!rp.charging;
+            if (rp.name) p.name = rp.name;
+            if (rp.avatarType) p.avatarType = rp.avatarType;
+        }
+        updateHUD();
+    }
+
+    function syncRemoteSnowballsFromRoom(room) {
+        const sbObj = room.snowballs || {};
+        const list = Object.values(sbObj).filter(s => s && s.id && s.senderId !== clientId);
+        for (const item of list) {
+            if (onlineSync.seenSnowballIds.has(item.id)) continue;
+            onlineSync.seenSnowballIds.add(item.id);
+
+            const owner = state.players.find(p => p.remoteId === item.senderId) ||
+                          state.players.find(p => p.team === item.team) ||
+                          null;
+
+            state.snowballs.push({
+                id: item.id,
+                owner,
+                team: item.team,
+                x: item.x,
+                y: item.y,
+                vx: item.vx,
+                vy: item.vy,
+                radius: item.radius || 12,
+                damage: item.damage || 18,
+                isMega: !!item.isMega,
+                isFreeze: !!item.isFreeze,
+                rot: 0,
+                trail: []
+            });
+            sfx.playThrow(item.isMega ? 1 : 0.65);
+        }
+    }
+
+    async function pushLocalPlayerStateToFirebase(force = false) {
+        if (!isOnlineRoomActive()) return;
+        const now = performance.now();
+        if (!force && now - onlineSync.lastPushTime < 85) return;
+        onlineSync.lastPushTime = now;
+
+        const me = state.players.find(p => p.isHuman);
+        if (!me) return;
+
+        try {
+            await fbRequest(`rooms/${onlineSync.roomCode}/players/${clientId}`, "PATCH", {
+                name: me.name,
+                team: me.team,
+                avatarType: me.avatarType,
+                x: me.x,
+                y: me.y,
+                hp: me.hp,
+                isDucking: me.isDucking,
+                aimAngle: me.aimAngle,
+                charging: me.charging,
+                updatedAt: Date.now()
+            });
+        } catch (_) {}
+    }
+
+    function startRoomPolling(code) {
+        if (onlineSync.pollTimer) clearInterval(onlineSync.pollTimer);
+
+        const pollOnce = async () => {
+            if (!onlineSync.roomCode || onlineSync.roomCode !== code) return;
+            try {
+                const room = await fbRequest(`rooms/${code}`, "GET");
+                if (!room) {
+                    if (state.screen !== "menu") {
+                        returnToMenu();
+                    }
+                    return;
+                }
+
+                applyRoomPlayersToLobby(room);
+
+                if (room.status === "playing") {
+                    if (state.screen === "menu") {
+                        startOnlineMatchFromRoom(room);
+                    } else if (state.screen === "playing" || state.screen === "roundIntro") {
+                        syncRemotePlayersFromRoom(room);
+                        syncRemoteSnowballsFromRoom(room);
+
+                        const remoteRound = Number(room.round) || 1;
+                        const remoteBlue = Number(room.blueScore) || 0;
+                        const remoteRed = Number(room.redScore) || 0;
+                        if (remoteRound > state.round || remoteBlue !== state.blueScore || remoteRed !== state.redScore) {
+                            state.blueScore = remoteBlue;
+                            state.redScore = remoteRed;
+                            updateHUD();
+                        }
+                    }
+                } else if (room.status === "lobby" && state.screen !== "menu") {
+                    returnToMenu();
+                }
+            } catch (_) {}
+        };
+
+        pollOnce();
+        onlineSync.pollTimer = setInterval(pollOnce, 140);
+    }
 
     const lobbyState = {
         roomCode: 'KAR42',
@@ -1226,6 +1675,10 @@
                 trail: []
             });
 
+            const launchedBall = state.snowballs[state.snowballs.length - 1];
+            if (this.isHuman && launchedBall && isOnlineRoomActive()) {
+                publishSnowballToFirebase(launchedBall);
+            }
             this.stats.throws++;
             this.cooldown = this.isHuman
                 ? (this.rapidTimer > 0 ? 0.28 : 0.60)
@@ -2250,12 +2703,30 @@
                 `;
             }
 
+            if (s.isRemote) {
+                return `
+                    <div class="rounded-xl border-2 p-2 ${teamClass} flex flex-col justify-between gap-1">
+                        <div class="flex items-center justify-between gap-1">
+                            <span class="font-black truncate">🌐 ${s.name}</span>
+                            ${s.isHost ? '<span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-200 text-amber-900">KURUCU</span>' : ''}
+                        </div>
+                        <div class="flex items-center justify-between text-[10px] font-bold">
+                            <span>${teamLabel} • ARKADAŞ</span>
+                            <span class="text-emerald-700">${s.ready ? 'HAZIR ✓' : 'BEKLİYOR'}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
             return `
                 <div class="rounded-xl border-2 p-2 ${teamClass} flex flex-col justify-between gap-1">
-                    <div class="font-black truncate">${s.name}</div>
+                    <div class="flex items-center justify-between gap-1">
+                        <span class="font-black truncate">${s.name}</span>
+                        ${s.isHost ? '<span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-200 text-amber-900">KURUCU</span>' : ''}
+                    </div>
                     <div class="flex items-center justify-between text-[10px] font-bold">
                         <span>${teamLabel} • 👤 SİZ</span>
-                        <span class="text-emerald-700">${s.ready ? 'HAZIR' : 'BEKLİYOR'}</span>
+                        <span class="text-emerald-700">${s.ready ? 'HAZIR ✓' : 'BEKLİYOR'}</span>
                     </div>
                     <div class="flex gap-1 mt-0.5">
                         <button type="button" data-slot-swap="${idx}" class="px-1.5 py-0.5 rounded bg-white/90 border border-slate-300 text-[10px] font-bold hover:bg-white cursor-pointer">Takım Değiştir</button>
@@ -2274,7 +2745,7 @@
         });
 
         container.querySelectorAll('[data-slot-swap]').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', async () => {
                 const i = Number(btn.dataset.slotSwap);
                 const humanSlot = lobbyState.slots[i];
                 const targetTeam = humanSlot.team === 'blue' ? 'red' : 'blue';
@@ -2288,14 +2759,27 @@
                 }
                 syncConfigBotsFromLobby();
                 renderLobby();
+                if (isOnlineRoomActive()) {
+                    const newX = targetTeam === 'blue' ? 300 : (WORLD_W - 300);
+                    await fbRequest(`rooms/${onlineSync.roomCode}/players/${clientId}`, "PATCH", {
+                        team: targetTeam,
+                        x: newX,
+                        aimAngle: targetTeam === 'blue' ? -0.35 : -(Math.PI - 0.35)
+                    }).catch(() => {});
+                }
             });
         });
 
         container.querySelectorAll('[data-slot-ready]').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', async () => {
                 const i = Number(btn.dataset.slotReady);
                 lobbyState.slots[i].ready = !lobbyState.slots[i].ready;
                 renderLobby();
+                if (isOnlineRoomActive()) {
+                    await fbRequest(`rooms/${onlineSync.roomCode}/players/${clientId}`, "PATCH", {
+                        ready: lobbyState.slots[i].ready
+                    }).catch(() => {});
+                }
             });
         });
     }
@@ -2374,7 +2858,15 @@
         return side === 'blue' ? [210, 440] : [WORLD_W - 210, WORLD_W - 440];
     }
 
-    function startMatch() {
+    async function startMatch() {
+        if (config.playersMode === 'online' && onlineSync.roomCode && !onlineSync.isHost) {
+            document.getElementById('menu-hint-msg').textContent = '⏳ Oda sahibi maçı başlatana kadar bekleyin...';
+            return;
+        }
+        return _startMatchInternal();
+    }
+
+    function _startMatchInternal() {
         const nickInput = document.getElementById('player-nick');
         const nick = getRawNickname();
         if (!nick) {
@@ -2467,6 +2959,16 @@
             state.players.push(new SnowFighterCharacter({
                 id: 4, name: 'Kızıl Tavşan', team: 'red', isHuman: false, controlScheme: 'ai', x: WORLD_W - 440, avatarType: 'arcticrabbit', aiDifficulty: config.difficulty
             }));
+        }
+
+        if (isOnlineRoomActive() && onlineSync.isHost) {
+            fbRequest(`rooms/${onlineSync.roomCode}`, "PATCH", {
+                status: "playing",
+                round: state.round,
+                blueScore: state.blueScore,
+                redScore: state.redScore,
+                snowballs: {}
+            }).catch(() => {});
         }
 
         document.getElementById('main-menu').classList.add('hidden');
@@ -2694,8 +3196,24 @@
         }
 
         for (const p of state.players) {
+            if (p.isRemote) {
+                p.blinkTimer -= dt;
+                if (p.blinkTimer <= 0) {
+                    p.isBlinking = !p.isBlinking;
+                    p.blinkTimer = p.isBlinking ? 0.12 : rand(2.0, 4.5);
+                }
+                if (p.hurtTimer > 0) p.hurtTimer -= dt;
+                if (p.laughTimer > 0) {
+                    p.laughTimer = Math.max(0, p.laughTimer - dt);
+                    p.gigglePhase += dt * 42;
+                }
+                continue;
+            }
             p.update(dt);
             p.updateCampIcicles(dt);
+        }
+        if (isOnlineRoomActive()) {
+            pushLocalPlayerStateToFirebase(false);
         }
 
         for (let i = state.icicles.length - 1; i >= 0; i--) {
@@ -3258,18 +3776,25 @@
         });
     });
 
-    document.getElementById('btn-create-room').addEventListener('click', () => {
+    document.getElementById('btn-create-room').addEventListener('click', async () => {
         const chosenFmt = config.format || '1v1';
         config.format = chosenFmt;
         config.bots = { blue: 0, red: 0 };
         config.botDifficulties = [];
-        lobbyState.slots = [];
-        buildLobbySlots(generateRoomCode());
-        refreshMenuFlow();
-        document.getElementById('lobby-status-msg').textContent = `${chosenFmt.toUpperCase()} odası boş slotlarla kuruldu (${lobbyState.roomCode}).`;
+        const code = generateRoomCode();
+        document.getElementById('lobby-status-msg').textContent = 'Oda kuruluyor...';
+        try {
+            await createFirebaseRoom(code, chosenFmt);
+            refreshMenuFlow();
+            document.getElementById('lobby-status-msg').textContent = `${chosenFmt.toUpperCase()} odası kuruldu: ${code}. Kodu arkadaşına gönderin!`;
+        } catch (err) {
+            document.getElementById('lobby-status-msg').textContent = `Oda kurulamadı: ${err.message}`;
+        }
     });
 
-    document.getElementById('btn-leave-room').addEventListener('click', () => {
+    document.getElementById('btn-leave-room').addEventListener('click', async () => {
+        await leaveFirebaseRoomOnServer();
+        stopOnlineSync();
         lobbyState.roomCreated = false;
         lobbyState.slots = [];
         config.bots = { blue: 0, red: 0 };
@@ -3279,23 +3804,38 @@
         document.getElementById('lobby-status-msg').textContent = 'Odadan ayrıldınız.';
     });
 
-    document.getElementById('btn-join-room').addEventListener('click', () => {
+    document.getElementById('btn-join-room').addEventListener('click', async () => {
         const code = document.getElementById('join-room-input').value.trim().toUpperCase();
         if (code.length < 3) {
             document.getElementById('lobby-status-msg').textContent = 'Lütfen en az 3 karakterlik bir oda kodu girin.';
             return;
         }
-        if (!config.format) config.format = '1v1';
-        buildLobbySlots(code);
-        refreshMenuFlow();
-        document.getElementById('lobby-status-msg').textContent = `${code} odasına bağlanıldı!`;
+        document.getElementById('lobby-status-msg').textContent = `${code} odasına bağlanılıyor...`;
+        try {
+            const res = await joinFirebaseRoom(code);
+            if (!res.ok) {
+                document.getElementById('lobby-status-msg').textContent = res.message;
+                return;
+            }
+            refreshMenuFlow();
+            document.getElementById('lobby-status-msg').textContent = `${code} odasına katıldınız! Oda sahibinin başlatmasını bekleyin.`;
+        } catch (err) {
+            document.getElementById('lobby-status-msg').textContent = `Bağlantı hatası: ${err.message}`;
+        }
     });
 
-    document.getElementById('btn-quick-match').addEventListener('click', () => {
-        if (!config.format) config.format = '1v1';
-        buildLobbySlots(generateRoomCode());
-        refreshMenuFlow();
-        document.getElementById('lobby-status-msg').textContent = `Eşleşme bulundu! Oda: ${lobbyState.roomCode}`;
+    document.getElementById('btn-quick-match').addEventListener('click', async () => {
+        const chosenFmt = config.format || '1v1';
+        config.format = chosenFmt;
+        const code = generateRoomCode();
+        document.getElementById('lobby-status-msg').textContent = 'Hızlı eşleşme odası açılıyor...';
+        try {
+            await createFirebaseRoom(code, chosenFmt);
+            refreshMenuFlow();
+            document.getElementById('lobby-status-msg').textContent = `Eşleşme odası hazır! Kod: ${code}`;
+        } catch (err) {
+            document.getElementById('lobby-status-msg').textContent = `Bağlantı hatası: ${err.message}`;
+        }
     });
 
     const nickField = document.getElementById('player-nick');
@@ -3415,6 +3955,12 @@
     });
 
     function returnToMenu() {
+        if (isOnlineRoomActive()) {
+            leaveFirebaseRoomOnServer();
+            stopOnlineSync();
+            lobbyState.roomCreated = false;
+            lobbyState.slots = [];
+        }
         setPadEditMode(false);
         exitMobileMatchImmersion();
         state.screen = 'menu';
