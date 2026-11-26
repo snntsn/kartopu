@@ -31,21 +31,15 @@
             overflow: hidden;
             height: 100dvh;
         }
-        canvas {
+        #gameCanvas {
+            position: fixed;
+            inset: 0;
+            z-index: 5;
             display: block;
             width: 100%;
             height: 100%;
             height: 100dvh;
             touch-action: none;
-        }
-        #gameCanvas {
-            position: fixed;
-            inset: 0;
-            z-index: 5;
-            width: 100vw;
-            height: 100vh;
-            height: 100dvh;
-            pointer-events: none;
         }
         .arcade-panel {
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(224, 242, 254, 0.97) 100%);
@@ -122,20 +116,6 @@
             outline-offset: 2px;
             cursor: grab;
         }
-        #banner-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 35;
-            pointer-events: none;
-            align-items: center;
-            justify-content: center;
-        }
-        #banner-overlay:not(.hidden) {
-            display: flex;
-        }
-        #gameover-modal:not(.hidden) {
-            display: flex;
-        }
         #portrait-warning {
             display: none;
         }
@@ -144,35 +124,50 @@
                 display: flex;
             }
         }
-        @media screen and (max-height: 500px) {
-            #gameover-card {
-                padding: 0.65rem 1rem !important;
-                max-width: 92vw !important;
+        .gameover-card {
+            max-height: 94dvh;
+            overflow-y: auto;
+        }
+        @media screen and (max-height: 500px) and (orientation: landscape) {
+            #gameover-modal {
+                padding: 8px 14px;
             }
-            #gameover-trophy {
-                display: none !important;
+            .gameover-card {
+                padding: 12px 18px;
+                max-width: 44rem;
+                max-height: 96dvh;
             }
-            #winner-title {
-                font-size: 1.25rem !important;
-                line-height: 1.3 !important;
-                margin-bottom: 0.15rem !important;
+            .gameover-trophy {
+                font-size: 2rem;
+                line-height: 1;
+                margin-bottom: 4px;
             }
-            #winner-subtitle {
-                font-size: 0.75rem !important;
-                margin-bottom: 0.45rem !important;
+            .gameover-title {
+                font-size: 1.5rem;
+                line-height: 1.15;
+                margin-bottom: 2px;
             }
-            #stats-container {
-                padding: 0.45rem !important;
-                margin-bottom: 0.55rem !important;
-                max-height: 36dvh;
-                overflow-y: auto;
-                display: grid !important;
+            .gameover-subtitle {
+                font-size: 0.75rem;
+                margin-bottom: 8px;
+            }
+            .gameover-stats {
+                padding: 8px 10px;
+                margin-bottom: 10px;
+                display: grid;
                 grid-template-columns: repeat(2, minmax(0, 1fr));
-                gap: 0.35rem !important;
+                gap: 6px;
             }
-            #gameover-actions button {
-                padding: 0.45rem 1rem !important;
-                font-size: 0.85rem !important;
+            .gameover-stat-row {
+                padding: 5px 8px;
+                font-size: 0.72rem;
+            }
+            .gameover-actions {
+                gap: 10px;
+            }
+            .gameover-btn {
+                padding: 8px 18px;
+                font-size: 0.85rem;
             }
         }
     </style>
@@ -189,72 +184,72 @@
         </button>
     </div>
 
-    <!-- ÜST BİLGİ ÇUBUĞU (HUD) - Simetrik & Kompakt Hizalı -->
-    <div id="hud" class="hidden fixed top-0 left-0 right-0 z-20 pointer-events-none px-2 sm:px-5 pt-1.5 sm:pt-2 grid grid-cols-[1fr_auto_1fr] items-center gap-1.5 sm:gap-3">
-        <!-- Sol: Mavi Takım -->
-        <div class="flex items-center justify-start">
-            <div class="flex items-center gap-1.5 sm:gap-2 bg-gradient-to-r from-blue-950/92 to-blue-900/85 border-2 border-blue-400 rounded-xl sm:rounded-2xl px-2 sm:px-2.5 py-1 shadow-lg">
-                <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-blue-600 border border-white flex items-center justify-center text-xs sm:text-base shadow-inner shrink-0">
+    <!-- ÜST BİLGİ ÇUBUĞU (HUD) -->
+    <div id="hud" class="hidden fixed top-0 left-0 right-0 z-20 pointer-events-none px-2 sm:px-5 pt-1.5 sm:pt-2 flex flex-col items-center gap-1">
+        <!-- Üst Orta Satır: Mavi Takım - Skor/Sayaç - Kırmızı Takım -->
+        <div class="flex items-center justify-center gap-1.5 sm:gap-3 max-w-full">
+            <!-- Mavi Takım -->
+            <div class="flex items-center gap-1.5 sm:gap-2 bg-gradient-to-r from-blue-950/92 to-blue-900/85 border-2 border-blue-400 rounded-xl sm:rounded-2xl px-1.5 sm:px-2.5 py-1 shadow-lg">
+                <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-blue-600 border border-white flex items-center justify-center text-xs sm:text-base shadow-inner shrink-0">
                     🧢
                 </div>
-                <div class="flex flex-col w-20 sm:w-32">
-                    <div class="flex items-center justify-between gap-1">
-                        <span class="text-blue-200 font-extrabold text-[9px] sm:text-xs tracking-wide truncate">MAVİ TAKIM</span>
-                        <div id="blue-stars" class="flex gap-0.5 text-[10px] sm:text-xs leading-none shrink-0"></div>
+                <div class="flex flex-col min-w-0">
+                    <div class="flex items-center justify-between gap-1.5">
+                        <span class="text-blue-200 font-extrabold text-[10px] sm:text-xs tracking-wide truncate">MAVİ TAKIM</span>
+                        <div id="blue-stars" class="flex gap-0.5 text-[10px] sm:text-xs shrink-0"></div>
                     </div>
-                    <div id="blue-hp-bars" class="flex flex-col gap-0.5 mt-0.5 w-full"></div>
+                    <div id="blue-hp-bars" class="flex flex-col gap-0.5 mt-0.5 w-16 sm:w-28"></div>
                 </div>
             </div>
-        </div>
 
-        <!-- Orta: Skor, Sayaç ve Emoji Barı -->
-        <div class="flex flex-col items-center justify-center shrink-0">
-            <div class="flex items-center gap-1.5 sm:gap-2.5 bg-slate-900/92 border-2 border-amber-400 rounded-xl sm:rounded-2xl px-2.5 sm:px-3.5 py-0.5 shadow-xl">
-                <span id="hud-blue-score" class="text-sky-400 text-base sm:text-xl font-black leading-none">0</span>
-                <span class="text-slate-500 text-[10px] sm:text-xs">-</span>
-                <span id="hud-timer" class="text-amber-300 font-mono text-xs sm:text-base bg-slate-800 px-1.5 py-0.5 rounded-md border border-slate-700 leading-none">60</span>
-                <span class="text-slate-500 text-[10px] sm:text-xs">-</span>
-                <span id="hud-red-score" class="text-rose-400 text-base sm:text-xl font-black leading-none">0</span>
-            </div>
-            <div id="hud-round-text" class="text-[8px] sm:text-[10px] font-bold text-sky-100 bg-slate-900/80 px-2 py-0.5 rounded-full mt-0.5 tracking-wider leading-none">
-                1. TUR • HEDEF: 3
-            </div>
-            <div class="pointer-events-auto flex items-center gap-1 mt-0.5 bg-slate-900/80 border border-white/20 rounded-full px-1.5 py-0.5">
-                <button type="button" data-emoji="❄️" class="emoji-btn text-[11px] sm:text-xs hover:scale-125 transition cursor-pointer px-0.5 leading-none">❄️</button>
-                <button type="button" data-emoji="🎯" class="emoji-btn text-[11px] sm:text-xs hover:scale-125 transition cursor-pointer px-0.5 leading-none">🎯</button>
-                <button type="button" data-emoji="😂" class="emoji-btn text-[11px] sm:text-xs hover:scale-125 transition cursor-pointer px-0.5 leading-none">😂</button>
-                <button type="button" data-emoji="🔥" class="emoji-btn text-[11px] sm:text-xs hover:scale-125 transition cursor-pointer px-0.5 leading-none">🔥</button>
-            </div>
-        </div>
-
-        <!-- Sağ: Kırmızı Takım + Hızlı Aksiyonlar -->
-        <div class="flex items-center justify-end gap-1.5">
-            <div class="flex items-center gap-1.5 sm:gap-2 bg-gradient-to-l from-red-950/92 to-red-900/85 border-2 border-red-400 rounded-xl sm:rounded-2xl px-2 sm:px-2.5 py-1 shadow-lg">
-                <div class="flex flex-col items-end w-20 sm:w-32">
-                    <div class="flex items-center justify-between gap-1 w-full">
-                        <div id="red-stars" class="flex gap-0.5 text-[10px] sm:text-xs leading-none shrink-0"></div>
-                        <span class="text-red-200 font-extrabold text-[9px] sm:text-xs tracking-wide truncate">KIRMIZI TAKIM</span>
-                    </div>
-                    <div id="red-hp-bars" class="flex flex-col gap-0.5 mt-0.5 w-full"></div>
+            <!-- Orta Skor, Sayaç ve Emoji Barı -->
+            <div class="flex flex-col items-center shrink-0">
+                <div class="flex items-center gap-1.5 sm:gap-2.5 bg-slate-900/92 border-2 border-amber-400 rounded-xl sm:rounded-2xl px-2 sm:px-3 py-0.5 shadow-xl">
+                    <span id="hud-blue-score" class="text-sky-400 text-sm sm:text-xl font-black">0</span>
+                    <span class="text-slate-500 text-xs">-</span>
+                    <span id="hud-timer" class="text-amber-300 font-mono text-xs sm:text-base bg-slate-800 px-1.5 sm:px-2 py-0.5 rounded-md border border-slate-700">60</span>
+                    <span class="text-slate-500 text-xs">-</span>
+                    <span id="hud-red-score" class="text-rose-400 text-sm sm:text-xl font-black">0</span>
                 </div>
-                <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-red-600 border border-white flex items-center justify-center text-xs sm:text-base shadow-inner shrink-0">
+                <div id="hud-round-text" class="text-[9px] sm:text-[11px] font-bold text-sky-100 bg-slate-900/80 px-2 py-0.5 rounded-full mt-0.5 tracking-wider">
+                    1. TUR • HEDEF: 3
+                </div>
+                <div class="pointer-events-auto flex items-center gap-1 mt-0.5 bg-slate-900/80 border border-white/20 rounded-full px-1.5 py-0.5">
+                    <button type="button" data-emoji="❄️" class="emoji-btn text-xs hover:scale-125 transition cursor-pointer px-0.5">❄️</button>
+                    <button type="button" data-emoji="🎯" class="emoji-btn text-xs hover:scale-125 transition cursor-pointer px-0.5">🎯</button>
+                    <button type="button" data-emoji="😂" class="emoji-btn text-xs hover:scale-125 transition cursor-pointer px-0.5">😂</button>
+                    <button type="button" data-emoji="🔥" class="emoji-btn text-xs hover:scale-125 transition cursor-pointer px-0.5">🔥</button>
+                </div>
+            </div>
+
+            <!-- Kırmızı Takım -->
+            <div class="flex items-center gap-1.5 sm:gap-2 bg-gradient-to-l from-red-950/92 to-red-900/85 border-2 border-red-400 rounded-xl sm:rounded-2xl px-1.5 sm:px-2.5 py-1 shadow-lg">
+                <div class="flex flex-col items-end min-w-0">
+                    <div class="flex items-center justify-between gap-1.5 w-full">
+                        <div id="red-stars" class="flex gap-0.5 text-[10px] sm:text-xs shrink-0"></div>
+                        <span class="text-red-200 font-extrabold text-[10px] sm:text-xs tracking-wide truncate">KIRMIZI TAKIM</span>
+                    </div>
+                    <div id="red-hp-bars" class="flex flex-col gap-0.5 mt-0.5 w-16 sm:w-28"></div>
+                </div>
+                <div class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-red-600 border border-white flex items-center justify-center text-xs sm:text-base shadow-inner shrink-0">
                     🧣
                 </div>
             </div>
+        </div>
 
-            <div class="pointer-events-auto flex items-center gap-1">
-                <button id="btn-ingame-pad-editor" type="button" title="Tuş Yerlerini Düzenle" class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-amber-500/90 hover:bg-amber-400 border border-amber-200 text-slate-950 flex items-center justify-center text-[10px] sm:text-xs font-black shadow cursor-pointer">✋</button>
-                <button id="btn-mute" type="button" title="Ses Aç/Kapat" class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-slate-800/90 hover:bg-slate-700 border border-slate-500 text-white flex items-center justify-center text-[10px] sm:text-xs shadow cursor-pointer">🔊</button>
-                <button id="btn-menu-exit" type="button" title="Ana Menü" class="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-slate-800/90 hover:bg-slate-700 border border-slate-500 text-white flex items-center justify-center text-[10px] sm:text-xs font-bold shadow cursor-pointer">🏠</button>
-            </div>
+        <!-- Sağ Üst Hızlı İşlem Butonları -->
+        <div class="pointer-events-auto fixed top-1.5 sm:top-2 right-2 sm:right-5 flex items-center gap-1 shrink-0">
+            <button id="btn-ingame-pad-editor" type="button" title="Tuş Yerlerini Düzenle" class="w-7 h-7 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-amber-500/90 hover:bg-amber-400 border border-amber-200 text-slate-950 flex items-center justify-center text-[10px] sm:text-xs font-black shadow cursor-pointer">✋</button>
+            <button id="btn-mute" type="button" title="Ses Aç/Kapat" class="w-7 h-7 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-slate-800/90 hover:bg-slate-700 border border-slate-500 text-white flex items-center justify-center text-[10px] sm:text-xs shadow cursor-pointer">🔊</button>
+            <button id="btn-menu-exit" type="button" title="Ana Menü" class="w-7 h-7 sm:w-8 sm:h-8 rounded-md sm:rounded-lg bg-slate-800/90 hover:bg-slate-700 border border-slate-500 text-white flex items-center justify-center text-[10px] sm:text-xs font-bold shadow cursor-pointer">🏠</button>
         </div>
     </div>
 
     <!-- Tur / Sonuç Duyuru Bannerı -->
-    <div id="banner-overlay" class="hidden fixed inset-0 z-35 pointer-events-none flex items-center justify-center p-4">
-        <div id="banner-card" class="bg-slate-900/95 border-4 border-amber-400 rounded-3xl px-8 py-5 text-center shadow-[0_0_50px_rgba(251,191,36,0.55)] max-w-xl w-full">
-            <h2 id="banner-title" class="text-2xl sm:text-4xl font-black text-amber-300 drop-shadow mb-1.5">1. TUR BAŞLIYOR!</h2>
-            <p id="banner-subtitle" class="text-white text-sm sm:text-lg font-bold">Zıpla, Eğil ve Kartopunu Fırlat!</p>
+    <div id="banner-overlay" class="hidden fixed inset-0 z-35 pointer-events-none flex items-center justify-center px-4">
+        <div id="banner-card" class="bg-slate-900/95 border-4 border-amber-400 rounded-3xl px-7 py-5 text-center shadow-[0_0_45px_rgba(251,191,36,0.45)] max-w-lg w-full">
+            <h2 id="banner-title" class="text-2xl sm:text-4xl font-black text-amber-300 drop-shadow mb-1">1. TUR BAŞLIYOR!</h2>
+            <p id="banner-subtitle" class="text-white text-xs sm:text-base font-bold">AT tuşuna basılı tut, eksen x'ten y'ye ilerlesin, bırakınca fırlat!</p>
         </div>
     </div>
 
@@ -281,183 +276,193 @@
             </div>
         </div>
 
-        <div id="touch-aim-cluster" class="pointer-events-auto fixed bottom-3 sm:bottom-5 right-3 sm:right-6 flex items-end gap-2">
-            <button id="t-aim-pad" type="button" class="touch-pad-btn relative w-16 h-16 sm:w-22 sm:h-22 rounded-full flex flex-col items-center justify-center text-white cursor-pointer">
-                <span class="text-base sm:text-xl leading-none pointer-events-none">❄️</span>
-                <span class="text-[10px] sm:text-[11px] font-black tracking-wide mt-0.5 pointer-events-none">AT</span>
+        <div id="touch-aim-cluster" class="pointer-events-auto fixed bottom-3 sm:bottom-5 right-3 sm:right-6 flex flex-col items-center gap-2">
+            <button id="t-aim-pad" type="button" class="touch-pad-btn w-16 h-16 sm:w-22 sm:h-22 rounded-full flex flex-col items-center justify-center text-white cursor-pointer">
+                <span class="text-xs sm:text-sm font-black tracking-wide pointer-events-none">AT</span>
             </button>
         </div>
     </div>
 
-    <!-- ANA MENÜ -->
-    <div id="main-menu" class="fixed inset-0 z-30 flex items-start sm:items-center justify-center p-3 sm:p-5 bg-slate-950/65 backdrop-blur-sm overflow-y-auto">
-        <div class="arcade-panel rounded-3xl max-w-4xl w-full p-4 sm:p-7 text-slate-800 relative my-auto">
-            <div class="text-center mb-4">
-                <div class="inline-flex items-center gap-2 bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider border-2 border-amber-300 mb-1.5">
-                    ❄️ KARTOPU DÜELLOSU • GENİŞ YATAY ARENA ❄️
-                </div>
+    <!-- ANA MENÜ (KARLI KIŞ TEMASI + İLK EKRAN: KARTOPU SAVAŞI & KULLANICI ADI) -->
+    <div id="main-menu" class="fixed inset-0 z-30 flex items-center justify-center p-3 sm:p-5 bg-gradient-to-b from-sky-950/75 via-blue-950/65 to-slate-950/80 backdrop-blur-[2px] overflow-y-auto">
+        <div class="arcade-panel rounded-3xl max-w-4xl w-full p-4 sm:p-6 text-slate-800 relative my-auto">
+            <div class="text-center mb-3 sm:mb-4">
                 <h1 class="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-700 via-sky-500 to-red-600 tracking-tight">
                     KARTOPU SAVAŞI
                 </h1>
-                <p class="text-slate-600 font-bold text-xs sm:text-sm mt-1">
-                    Avatarını seç, 1. oyuncu modunu belirle; AT tuşuna basılı tutarken eksen x'ten y'ye ilerler, bıraktığında o eksende atar!
-                </p>
             </div>
 
-            <!-- 1. AVATAR TİPİ (2x2 GRID) -->
-            <div class="bg-white/90 rounded-2xl p-3 border-2 border-sky-200 mb-3">
-                <h3 class="text-xs font-black text-sky-700 uppercase tracking-wider mb-2">🐾 1. KARAKTERİNİ SEÇ</h3>
-                <div class="grid grid-cols-2 gap-2">
-                    <button type="button" data-avatar="polarbear" class="avatar-btn opt-btn active rounded-xl p-2.5 flex items-center justify-center gap-2.5 cursor-pointer">
-                        <span class="text-2xl">🐻‍❄️</span>
-                        <div class="text-left">
-                            <div class="text-xs sm:text-sm font-black">Kutup Ayısı</div>
-                            <div class="text-[11px] font-bold text-slate-500">Atkılı Buz Devi</div>
-                        </div>
-                    </button>
-                    <button type="button" data-avatar="penguin" class="avatar-btn opt-btn rounded-xl p-2.5 flex items-center justify-center gap-2.5 cursor-pointer">
-                        <span class="text-2xl">🐧</span>
-                        <div class="text-left">
-                            <div class="text-xs sm:text-sm font-black">Penguen</div>
-                            <div class="text-[11px] font-bold text-slate-500">Çevik Buz Savaşçısı</div>
-                        </div>
-                    </button>
-                    <button type="button" data-avatar="arcticfox" class="avatar-btn opt-btn rounded-xl p-2.5 flex items-center justify-center gap-2.5 cursor-pointer">
-                        <span class="text-2xl">🦊</span>
-                        <div class="text-left">
-                            <div class="text-xs sm:text-sm font-black">Tilki</div>
-                            <div class="text-[11px] font-bold text-slate-500">Turuncu Kış Avcısı</div>
-                        </div>
-                    </button>
-                    <button type="button" data-avatar="arcticrabbit" class="avatar-btn opt-btn rounded-xl p-2.5 flex items-center justify-center gap-2.5 cursor-pointer">
-                        <span class="text-2xl">🐰</span>
-                        <div class="text-left">
-                            <div class="text-xs sm:text-sm font-black">Kutup Tavşanı</div>
-                            <div class="text-[11px] font-bold text-slate-500">Uzun Kulaklı Kışçı</div>
-                        </div>
+            <!-- 1. KULLANICI ADI GİRİŞİ (İLK ADIM) -->
+            <div id="nickname-step" class="bg-gradient-to-b from-white to-sky-50/95 rounded-2xl p-4 sm:p-5 border-2 border-sky-300 shadow-inner">
+                <label for="player-nick" class="block text-xs sm:text-sm font-black text-sky-800 uppercase tracking-wider mb-1.5">👤 KULLANICI ADI</label>
+                <input id="player-nick" type="text" maxlength="14" value="" placeholder="Kullanıcı adınızı girin..." class="w-full px-3.5 py-2.5 rounded-xl border-2 border-sky-300 bg-white text-sm sm:text-base font-bold text-slate-800 focus:outline-none focus:border-sky-600">
+                <div id="nick-error-msg" class="hidden text-xs font-extrabold text-rose-600 mt-1.5">⚠️ Devam etmek için lütfen bir kullanıcı adı girin.</div>
+                <div class="mt-3.5 flex justify-end">
+                    <button id="btn-nick-continue" type="button" class="btn-arcade w-full sm:w-auto bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black text-sm sm:text-base px-7 py-2.5 rounded-2xl tracking-wide cursor-pointer">
+                        Devam →
                     </button>
                 </div>
             </div>
 
-            <!-- 2. 1. OYUNCU MODU -->
-            <div class="bg-sky-50/90 rounded-2xl p-3 border-2 border-sky-300 mb-3">
-                <h3 class="text-xs font-black text-sky-800 uppercase tracking-wider mb-2">🎮 2. 1. OYUNCU MODU</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <button type="button" data-players="1p" class="mode-btn opt-btn rounded-xl p-2.5 flex items-center justify-center gap-2.5 cursor-pointer">
-                        <span class="text-2xl">🧑</span>
-                        <div class="text-left">
-                            <div class="text-sm font-black text-slate-900">Tek Kişi</div>
-                            <div class="text-xs font-bold text-slate-500">Botlara karşı tek başına oyna</div>
-                        </div>
-                    </button>
-                    <button type="button" data-players="online" class="mode-btn opt-btn rounded-xl p-2.5 flex items-center justify-center gap-2.5 cursor-pointer">
-                        <span class="text-2xl">🌐</span>
-                        <div class="text-left">
-                            <div class="text-sm font-black text-sky-700">Çevrim İçi</div>
-                            <div class="text-xs font-bold text-slate-500">Yeni oda kur veya odaya katıl</div>
-                        </div>
-                    </button>
-                </div>
-            </div>
-
-            <!-- 3. FORMAT SEÇİMİ (TEK KİŞİ MODU İÇİN) -->
-            <div id="format-step" class="hidden bg-white/90 rounded-2xl p-3 border-2 border-sky-200 mb-3">
-                <h3 class="text-xs font-black text-sky-700 uppercase tracking-wider mb-2">⚔️ 3. MAÇ FORMATI SEÇ</h3>
-                <div class="grid grid-cols-2 gap-2.5">
-                    <button type="button" data-format="1v1" class="format-btn opt-btn rounded-xl p-2.5 text-center cursor-pointer">
-                        <div class="text-base sm:text-lg font-black text-blue-600">1 vs 1</div>
-                        <div class="text-xs font-bold text-slate-500">Birebir düello</div>
-                    </button>
-                    <button type="button" data-format="2v2" class="format-btn opt-btn rounded-xl p-2.5 text-center cursor-pointer">
-                        <div class="text-base sm:text-lg font-black text-red-600">2 vs 2</div>
-                        <div class="text-xs font-bold text-slate-500">İkişer kişilik takımlar</div>
-                    </button>
-                </div>
-            </div>
-
-            <!-- 4. ÇEVRİMİÇİ ODA / LOBİ -->
-            <div id="online-lobby-box" class="hidden bg-sky-100/95 border-2 border-sky-300 rounded-2xl p-3.5 mb-3">
-                <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
-                    <div class="flex flex-wrap items-center gap-2">
-                        <input id="player-nick" type="text" maxlength="14" value="KışOyuncusu" placeholder="Takma Ad" class="px-3 py-1.5 rounded-xl border-2 border-sky-300 bg-white text-xs sm:text-sm font-bold text-slate-800 w-32 sm:w-36 focus:outline-none focus:border-sky-600">
-                        <span class="text-xs font-black text-sky-800 bg-white px-2.5 py-1.5 rounded-xl border border-sky-300">
-                            ODA: <span id="lobby-room-code" class="font-mono text-blue-700">—</span>
-                        </span>
-                        <input id="join-room-input" type="text" maxlength="5" placeholder="Kod" class="px-2.5 py-1.5 rounded-xl border-2 border-sky-300 bg-white text-xs font-mono font-bold text-slate-800 w-20 uppercase focus:outline-none focus:border-sky-600">
-                        <button id="btn-join-room" type="button" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black cursor-pointer">Katıl</button>
+            <!-- DEVAM SONRASI EKRANLAR -->
+            <div id="main-setup-steps" class="hidden">
+                <!-- Seçili Kullanıcı Adı Özeti ve Değiştir Butonu -->
+                <div class="flex items-center justify-between gap-2 bg-sky-100/90 rounded-2xl px-3 py-2 border border-sky-300 mb-2.5">
+                    <div class="text-xs sm:text-sm font-extrabold text-sky-950 truncate">
+                        👤 Oyuncu: <span id="active-nick-label" class="text-blue-700 font-black"></span>
                     </div>
-                    <div class="flex items-center gap-1.5">
-                        <div id="room-fmt-selector" class="inline-flex items-center rounded-xl bg-white p-0.5 border-2 border-sky-300">
-                            <button id="btn-room-fmt-1v1" type="button" data-room-format="1v1" class="room-fmt-btn px-2 py-1 rounded-lg bg-sky-600 text-white text-[11px] font-black cursor-pointer">1v1</button>
-                            <button id="btn-room-fmt-2v2" type="button" data-room-format="2v2" class="room-fmt-btn px-2 py-1 rounded-lg text-sky-900 hover:bg-sky-100 text-[11px] font-black cursor-pointer">2v2</button>
-                        </div>
-                        <span id="active-room-fmt-badge" class="hidden px-2.5 py-1 rounded-xl bg-blue-900 text-white text-[11px] font-black tracking-wide"></span>
-                        <button id="btn-create-room" type="button" class="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-black cursor-pointer">Yeni Oda</button>
-                        <button id="btn-leave-room" type="button" class="hidden px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">Odadan Çık</button>
-                        <button id="btn-quick-match" type="button" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black cursor-pointer">Hızlı Eşleşme</button>
+                    <button id="btn-change-nick" type="button" class="px-2.5 py-1 rounded-xl bg-white hover:bg-sky-50 border border-sky-300 text-[11px] font-black text-sky-800 shrink-0 cursor-pointer">
+                        Adı Değiştir
+                    </button>
+                </div>
+
+                <!-- 2. KARAKTER SEÇİMİ (2x2 GRID) -->
+                <div class="bg-white/90 rounded-2xl p-2.5 border-2 border-sky-200 mb-2.5">
+                    <h3 class="text-[11px] sm:text-xs font-black text-sky-700 uppercase tracking-wider mb-1.5">🐾 KARAKTER SEÇİMİ</h3>
+                    <div class="grid grid-cols-2 gap-1.5 sm:gap-2">
+                        <button type="button" data-avatar="polarbear" class="avatar-btn opt-btn active rounded-xl p-2 flex items-center justify-center gap-2 cursor-pointer">
+                            <span class="text-xl sm:text-2xl">🐻‍❄️</span>
+                            <div class="text-left">
+                                <div class="text-xs sm:text-sm font-black leading-tight">Kutup Ayısı</div>
+                                <div class="text-[10px] sm:text-[11px] font-bold text-slate-500 leading-tight">Atkılı Buz Devi</div>
+                            </div>
+                        </button>
+                        <button type="button" data-avatar="penguin" class="avatar-btn opt-btn rounded-xl p-2 flex items-center justify-center gap-2 cursor-pointer">
+                            <span class="text-xl sm:text-2xl">🐧</span>
+                            <div class="text-left">
+                                <div class="text-xs sm:text-sm font-black leading-tight">Penguen</div>
+                                <div class="text-[10px] sm:text-[11px] font-bold text-slate-500 leading-tight">Çevik Buz Savaşçısı</div>
+                            </div>
+                        </button>
+                        <button type="button" data-avatar="arcticfox" class="avatar-btn opt-btn rounded-xl p-2 flex items-center justify-center gap-2 cursor-pointer">
+                            <span class="text-xl sm:text-2xl">🦊</span>
+                            <div class="text-left">
+                                <div class="text-xs sm:text-sm font-black leading-tight">Tilki</div>
+                                <div class="text-[10px] sm:text-[11px] font-bold text-slate-500 leading-tight">Turuncu Kış Avcısı</div>
+                            </div>
+                        </button>
+                        <button type="button" data-avatar="arcticrabbit" class="avatar-btn opt-btn rounded-xl p-2 flex items-center justify-center gap-2 cursor-pointer">
+                            <span class="text-xl sm:text-2xl">🐰</span>
+                            <div class="text-left">
+                                <div class="text-xs sm:text-sm font-black leading-tight">Kutup Tavşanı</div>
+                                <div class="text-[10px] sm:text-[11px] font-bold text-slate-500 leading-tight">Uzun Kulaklı Kışçı</div>
+                            </div>
+                        </button>
                     </div>
                 </div>
-                <div id="lobby-roster" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs"></div>
-                <div id="lobby-status-msg" class="text-[11px] font-bold text-sky-800 mt-2">Yeni Oda'nın yanından 1v1 veya 2v2 seçip Yeni Oda'ya basın veya oda kodu ile katılın.</div>
-            </div>
 
-            <!-- Kontroller ve Süper Güçler -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 text-xs">
-                <div class="bg-sky-50 rounded-2xl p-3 border-2 border-sky-200">
-                    <div class="font-black text-sky-900 mb-1.5 flex items-center justify-between flex-wrap gap-1.5">
-                        <span>🎯 x → y Eksen Nişan &amp; Hareket</span>
+                <!-- 3. OYUN MODU -->
+                <div class="bg-sky-50/90 rounded-2xl p-2.5 border-2 border-sky-300 mb-2.5">
+                    <h3 class="text-[11px] sm:text-xs font-black text-sky-800 uppercase tracking-wider mb-1.5">🎮 OYUN MODU</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button type="button" data-players="1p" class="mode-btn opt-btn rounded-xl p-2 flex items-center justify-center gap-2 cursor-pointer">
+                            <span class="text-xl sm:text-2xl">🧑</span>
+                            <div class="text-left">
+                                <div class="text-xs sm:text-sm font-black text-slate-900">Tek Kişi</div>
+                                <div class="text-[11px] font-bold text-slate-500">Botlara karşı tek başına oyna</div>
+                            </div>
+                        </button>
+                        <button type="button" data-players="online" class="mode-btn opt-btn rounded-xl p-2 flex items-center justify-center gap-2 cursor-pointer">
+                            <span class="text-xl sm:text-2xl">🌐</span>
+                            <div class="text-left">
+                                <div class="text-xs sm:text-sm font-black text-sky-700">Çevrim İçi</div>
+                                <div class="text-[11px] font-bold text-slate-500">Yeni oda kur veya odaya katıl</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4. FORMAT SEÇİMİ (TEK KİŞİ MODU İÇİN) -->
+                <div id="format-step" class="hidden bg-white/90 rounded-2xl p-2.5 border-2 border-sky-200 mb-2.5">
+                    <h3 class="text-[11px] sm:text-xs font-black text-sky-700 uppercase tracking-wider mb-1.5">⚔️ MAÇ FORMATI SEÇ</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" data-format="1v1" class="format-btn opt-btn rounded-xl p-2 text-center cursor-pointer">
+                            <div class="text-sm sm:text-base font-black text-blue-600">1 vs 1</div>
+                            <div class="text-[11px] font-bold text-slate-500">Birebir düello</div>
+                        </button>
+                        <button type="button" data-format="2v2" class="format-btn opt-btn rounded-xl p-2 text-center cursor-pointer">
+                            <div class="text-sm sm:text-base font-black text-red-600">2 vs 2</div>
+                            <div class="text-[11px] font-bold text-slate-500">İkişer kişilik takımlar</div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 5. ÇEVRİMİÇİ ODA / LOBİ -->
+                <div id="online-lobby-box" class="hidden bg-sky-100/95 border-2 border-sky-300 rounded-2xl p-3 mb-2.5">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="text-xs font-black text-sky-800 bg-white px-2.5 py-1.5 rounded-xl border border-sky-300">
+                                ODA: <span id="lobby-room-code" class="font-mono text-blue-700">—</span>
+                            </span>
+                            <input id="join-room-input" type="text" maxlength="5" placeholder="Kod" class="px-2.5 py-1.5 rounded-xl border-2 border-sky-300 bg-white text-xs font-mono font-bold text-slate-800 w-20 uppercase focus:outline-none focus:border-sky-600">
+                            <button id="btn-join-room" type="button" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black cursor-pointer">Katıl</button>
+                        </div>
                         <div class="flex items-center gap-1.5">
-                            <label class="inline-flex items-center gap-1.5 cursor-pointer text-[11px] font-bold text-sky-700 bg-white px-2 py-0.5 rounded-lg border border-sky-200">
-                                <input type="checkbox" id="toggle-touch-ui" class="accent-sky-600">
-                                <span>Dokunmatik Tuşlar</span>
-                            </label>
-                            <button id="btn-open-pad-editor" type="button" class="text-[11px] font-black text-amber-800 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded-lg border border-amber-300 cursor-pointer">
-                                Tuş Düzeni
-                            </button>
+                            <div id="room-fmt-selector" class="inline-flex items-center rounded-xl bg-white p-0.5 border-2 border-sky-300">
+                                <button id="btn-room-fmt-1v1" type="button" data-room-format="1v1" class="room-fmt-btn px-2 py-1 rounded-lg bg-sky-600 text-white text-[11px] font-black cursor-pointer">1v1</button>
+                                <button id="btn-room-fmt-2v2" type="button" data-room-format="2v2" class="room-fmt-btn px-2 py-1 rounded-lg text-sky-900 hover:bg-sky-100 text-[11px] font-black cursor-pointer">2v2</button>
+                            </div>
+                            <span id="active-room-fmt-badge" class="hidden px-2.5 py-1 rounded-xl bg-blue-900 text-white text-[11px] font-black tracking-wide"></span>
+                            <button id="btn-create-room" type="button" class="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-black cursor-pointer">Yeni Oda</button>
+                            <button id="btn-leave-room" type="button" class="hidden px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-black cursor-pointer">Odadan Çık</button>
+                            <button id="btn-quick-match" type="button" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black cursor-pointer">Hızlı Eşleşme</button>
                         </div>
                     </div>
-                    <div class="space-y-1 text-slate-700 font-semibold">
+                    <div id="lobby-roster" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs"></div>
+                    <div id="lobby-status-msg" class="text-[11px] font-bold text-sky-800 mt-2">Yeni Oda'nın yanından 1v1 veya 2v2 seçip Yeni Oda'ya basın veya oda kodu ile katılın.</div>
+                </div>
+
+                <!-- Kontrol Bilgisi + Basılı Tutunca Açılan Kurallar Bilgi İşareti -->
+                <div class="relative bg-sky-50 rounded-2xl p-2.5 border-2 border-sky-200 mb-3 text-xs">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="font-black text-sky-900 flex items-center gap-1.5">
+                            <span>🎯 Kontroller</span>
+                        </div>
+                        <button id="btn-rules-info" type="button" aria-label="Kurallar Bilgisi" class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white font-black text-xs shadow cursor-pointer select-none">
+                            i
+                        </button>
+                    </div>
+                    <div class="mt-1 text-[11px] sm:text-xs text-slate-700 font-semibold space-y-0.5">
                         <div><kbd class="px-1.5 py-0.5 bg-white border rounded font-mono">A/D</kbd> Koş • <kbd class="px-1.5 py-0.5 bg-white border rounded font-mono">W</kbd> Zıpla • <kbd class="px-1.5 py-0.5 bg-white border rounded font-mono">S</kbd> Eğil</div>
-                        <div><b>AT / Space</b> basılı tutulurken kesik çizgi x'ten y'ye ilerler, bırakınca o eksende atar!</div>
+                        <div><b>AT / Space</b> basılı tutarken eksen x'ten y'ye ilerler, bırakınca atar.</div>
+                    </div>
+
+                    <!-- Yalnızca bilgi işaretine basılı tutulduğunda görünen kurallar kartı -->
+                    <div id="rules-hold-popover" class="hidden absolute right-2 bottom-9 z-40 w-72 sm:w-80 bg-slate-900/96 text-white border-2 border-amber-400 rounded-2xl p-3 shadow-2xl text-[11px] leading-relaxed pointer-events-none">
+                        <div class="font-black text-amber-300 mb-1">📜 Oyun Kuralları &amp; İpuçları</div>
+                        <ul class="space-y-1 text-slate-100 font-medium list-disc pl-4">
+                            <li>3 tur kazanan takım şampiyon olur; her tur süresi 60 saniyedir.</li>
+                            <li><b>AT / Space</b> basılı tutulurken nişan açısı x'ten y'ye ilerler, bırakınca atılır.</li>
+                            <li>Orta buz engelinde 3 saniye bekleyince tepeden buz sarkıtı düşer.</li>
+                            <li>Kutular <b>Dev Kartopu</b>, <b>Buz Dondurucu</b>, <b>Seri Atış</b> ve <b>Süper Zıplama + Kalkan</b> verir.</li>
+                        </ul>
                     </div>
                 </div>
 
-                <div class="bg-amber-50 rounded-2xl p-3 border-2 border-amber-200">
-                    <div class="font-black text-amber-900 mb-1">🧊 Buz Sarkıtı Kuralı &amp; Kutular</div>
-                    <div class="grid grid-cols-2 gap-1 text-slate-700 font-semibold">
-                        <div>🧊 <b>Orta Engel:</b> 3 sn durunca sarkıt düşer!</div>
-                        <div>🥶 <b>Buz Dondurucu:</b> 2 sn dondurur</div>
-                        <div>☄️ <b>Dev Kartopu</b></div>
-                        <div>🔥 <b>Seri Atış</b></div>
-                    </div>
+                <div class="flex flex-col items-center gap-1.5">
+                    <div id="menu-hint-msg" class="text-[11px] sm:text-xs font-extrabold text-sky-800 text-center"></div>
+                    <button id="btn-start" type="button" class="btn-arcade w-full sm:w-auto bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black text-base sm:text-xl px-10 py-3 rounded-2xl tracking-wide cursor-pointer">
+                        ❄️ OYUNU BAŞLAT
+                    </button>
                 </div>
-            </div>
-
-            <div class="flex flex-col items-center gap-2">
-                <div id="menu-hint-msg" class="text-xs font-extrabold text-sky-800"></div>
-                <button id="btn-start" type="button" class="btn-arcade bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black text-xl px-12 py-3.5 rounded-2xl tracking-wide cursor-pointer">
-                    ❄️ MAÇI BAŞLAT (3 TUR)
-                </button>
             </div>
         </div>
     </div>
 
     <!-- MAÇ SONU EKRANI -->
-    <div id="gameover-modal" class="hidden fixed inset-0 z-40 flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto">
-        <div id="gameover-card" class="arcade-panel rounded-3xl max-w-lg w-full p-4 sm:p-6 text-center my-auto max-h-[94dvh] flex flex-col justify-between">
-            <div>
-                <div id="gameover-trophy" class="text-4xl sm:text-5xl mb-1">🏆</div>
-                <h2 id="winner-title" class="text-2xl sm:text-3xl font-black text-blue-700 mb-0.5">MAVİ TAKIM KAZANDI!</h2>
-                <p id="winner-subtitle" class="text-slate-600 font-bold text-xs sm:text-sm mb-3">Skor: 3 - 1</p>
-            </div>
+    <div id="gameover-modal" class="hidden fixed inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
+        <div class="arcade-panel gameover-card rounded-3xl max-w-lg w-full p-5 sm:p-6 text-center">
+            <div class="gameover-trophy text-5xl sm:text-6xl mb-2">🏆</div>
+            <h2 id="winner-title" class="gameover-title text-2xl sm:text-4xl font-black text-blue-700 mb-1">MAVİ TAKIM KAZANDI!</h2>
+            <p id="winner-subtitle" class="gameover-subtitle text-slate-600 font-bold text-xs sm:text-sm mb-4">Skor: 3 - 1</p>
 
-            <div id="stats-container" class="bg-white/90 rounded-2xl border-2 border-sky-200 p-2.5 sm:p-3 mb-3 space-y-1.5 text-left text-xs sm:text-sm overflow-y-auto"></div>
+            <div id="stats-container" class="gameover-stats bg-white/90 rounded-2xl border-2 border-sky-200 p-3 sm:p-4 mb-5 space-y-2 text-left text-xs sm:text-sm"></div>
 
-            <div id="gameover-actions" class="flex items-center justify-center gap-2.5 shrink-0 pt-0.5">
-                <button id="btn-rematch" type="button" class="btn-green bg-gradient-to-r from-emerald-500 to-green-600 text-white font-black px-5 py-2.5 rounded-2xl text-sm sm:text-base cursor-pointer">
+            <div class="gameover-actions flex items-center justify-center gap-3">
+                <button id="btn-rematch" type="button" class="gameover-btn btn-green bg-gradient-to-r from-emerald-500 to-green-600 text-white font-black px-6 sm:px-7 py-3 rounded-2xl text-sm sm:text-base cursor-pointer">
                     🔄 Rövanş Yap
                 </button>
-                <button id="btn-back-menu" type="button" class="btn-arcade bg-gradient-to-r from-sky-500 to-blue-600 text-white font-black px-5 py-2.5 rounded-2xl text-sm sm:text-base cursor-pointer">
+                <button id="btn-back-menu" type="button" class="gameover-btn btn-arcade bg-gradient-to-r from-sky-500 to-blue-600 text-white font-black px-6 sm:px-7 py-3 rounded-2xl text-sm sm:text-base cursor-pointer">
                     🏠 Ana Menü
                 </button>
             </div>
@@ -620,7 +625,7 @@
     const sfx = new SoundEffects();
 
     const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas ? canvas.getContext('2d') : null;
+    const ctx = canvas.getContext('2d');
 
     const WORLD_W = 1600;
     const WORLD_H = 720;
@@ -642,6 +647,16 @@
     const rand = (min, max) => Math.random() * (max - min) + min;
     const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
     const dist = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1);
+
+    function getRawNickname() {
+        const input = document.getElementById('player-nick');
+        return input ? input.value.trim() : '';
+    }
+
+    function getHumanNickname() {
+        const val = getRawNickname();
+        return val || 'KışOyuncusu';
+    }
 
     function nudgeAddressBarHide() {
         try {
@@ -685,12 +700,10 @@
     }
 
     function resizeCanvas() {
-        if (!canvas) return;
         const rect = canvas.getBoundingClientRect();
-        const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
-        const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-        const w = Math.max(1, Math.round(rect.width || vw || window.innerWidth || WORLD_W));
-        const h = Math.max(1, Math.round(rect.height || vh || window.innerHeight || WORLD_H));
+        const vv = window.visualViewport;
+        const w = Math.max(1, Math.round(rect.width || (vv ? vv.width : window.innerWidth) || 1280));
+        const h = Math.max(1, Math.round(rect.height || (vv ? vv.height : window.innerHeight) || 720));
         canvas.width = w;
         canvas.height = h;
         scaleX = w / WORLD_W;
@@ -716,6 +729,7 @@
     const config = {
         format: null,
         playersMode: null,
+        nicknameConfirmed: false,
         difficulty: 'medium',
         roundsToWin: 3,
         avatarType: 'polarbear',
@@ -820,7 +834,7 @@
             this.sweepDir = 1;
             this.charge = 0.68;
             this.aimAngle = team === 'blue' ? -0.35 : -(Math.PI - 0.35);
-            this.cooldown = 0.60;
+            this.cooldown = 0.6;
 
             this.campTimer = 0;
             this.icicleSpawnCooldown = 0;
@@ -830,13 +844,14 @@
             this.hurtTimer = 0;
             this.laughTimer = 0;
             this.gigglePhase = rand(0, Math.PI * 2);
+            this.giggleCooldown = 0;
             this.walkPhase = 0;
 
             this.stats = { throws: 0, hits: 0, damage: 0 };
 
             this.ai = {
                 decisionTimer: rand(0.65, 1.15),
-                shootTimer: rand(0.85, 1.45),
+                shootTimer: rand(1.1, 2.0),
                 targetX: x,
                 wantCharge: 0.62,
                 wantAngle: this.aimAngle
@@ -865,14 +880,15 @@
             this.sweepDir = 1;
             this.charge = 0.68;
             this.aimAngle = this.team === 'blue' ? -0.35 : -(Math.PI - 0.35);
-            this.cooldown = 0.60;
+            this.cooldown = 0.65;
             this.campTimer = 0;
             this.icicleSpawnCooldown = 0;
             this.hurtTimer = 0;
             this.laughTimer = 0;
             this.gigglePhase = rand(0, Math.PI * 2);
+            this.giggleCooldown = 0;
             this.ai.decisionTimer = rand(0.65, 1.15);
-            this.ai.shootTimer = rand(0.85, 1.45);
+            this.ai.shootTimer = rand(1.2, 2.1);
         }
 
         get isAlive() { return this.hp > 0; }
@@ -923,9 +939,10 @@
             }
 
             if (this.hurtTimer > 0) this.hurtTimer -= dt;
+            if (this.giggleCooldown > 0) this.giggleCooldown -= dt;
             if (this.laughTimer > 0) {
                 this.laughTimer = Math.max(0, this.laughTimer - dt);
-                this.gigglePhase += dt * 46;
+                this.gigglePhase += dt * 42;
             }
             if (this.cooldown > 0) this.cooldown -= dt;
             if (this.rapidTimer > 0) this.rapidTimer -= dt;
@@ -1087,7 +1104,7 @@
                 if (this.rapidTimer > 0) {
                     if (keyThrowHeld && this.cooldown <= 0) {
                         this.fireSnowball();
-                        this.cooldown = 0.28;
+                        this.cooldown = 0.36;
                     }
                 } else if (keyThrowHeld && this.cooldown <= 0) {
                     this.fireSnowball();
@@ -1098,10 +1115,10 @@
         thinkAI(dt) {
             const diffKey = this.aiDifficulty || config.difficulty || 'medium';
             const diffCfg = {
-                easy:   { react: 1.05, dodgeDist: 155, accuracy: 0.24, shotMin: 1.25, shotMax: 1.95 },
-                medium: { react: 0.72, dodgeDist: 220, accuracy: 0.12, shotMin: 0.85, shotMax: 1.45 },
-                hard:   { react: 0.48, dodgeDist: 295, accuracy: 0.05, shotMin: 0.65, shotMax: 1.15 }
-            }[diffKey] || { react: 0.72, dodgeDist: 220, accuracy: 0.12, shotMin: 0.85, shotMax: 1.45 };
+                easy:   { react: 1.05, dodgeDist: 155, accuracy: 0.24, shotMin: 1.85, shotMax: 2.95 },
+                medium: { react: 0.72, dodgeDist: 220, accuracy: 0.12, shotMin: 1.25, shotMax: 2.15 },
+                hard:   { react: 0.48, dodgeDist: 295, accuracy: 0.05, shotMin: 0.90, shotMax: 1.55 }
+            }[diffKey] || { react: 0.72, dodgeDist: 220, accuracy: 0.12, shotMin: 1.25, shotMax: 2.15 };
 
             let wantJump = false;
             let wantDuck = false;
@@ -1184,7 +1201,9 @@
             });
 
             this.stats.throws++;
-            this.cooldown = this.rapidTimer > 0 ? 0.28 : 0.60;
+            this.cooldown = this.isHuman
+                ? (this.rapidTimer > 0 ? 0.28 : 0.60)
+                : (this.rapidTimer > 0 ? 0.36 : 0.60);
             this.scaleX = 1.18;
             this.scaleY = 0.86;
             sfx.playThrow(isMega ? 1 : this.charge);
@@ -1222,7 +1241,10 @@
                 if (sb.owner && sb.owner.stats) {
                     sb.owner.stats.hits++;
                     sb.owner.stats.damage += dmg;
-                    sb.owner.laughTimer = 1.15;
+                    if (sb.owner.giggleCooldown <= 0 && Math.random() < 0.38) {
+                        sb.owner.laughTimer = 0.65;
+                        sb.owner.giggleCooldown = 3.2;
+                    }
                 }
                 spawnFloatingText(this.x, this.y - 84, `-${dmg}`, '#f87171');
             }
@@ -1242,7 +1264,7 @@
             const isBlue = this.team === 'blue';
             const dir = Math.cos(this.aimAngle) >= 0 ? 1 : -1;
             const isLaughing = this.laughTimer > 0;
-            const giggleOffsetY = isLaughing ? Math.sin(this.gigglePhase) * 2.4 : 0;
+            const giggleOffsetY = isLaughing ? Math.sin(this.gigglePhase) * 2.1 : 0;
             const animT = performance.now() * 0.008 + this.id * 1.3;
 
             ctx.save();
@@ -1286,7 +1308,7 @@
             const gloveColor = isBlue ? '#1d4ed8' : '#b91c1c';
 
             if (this.avatarType === 'arcticfox') {
-                const tailWag = Math.sin(animT * 1.3) * 6;
+                const tailWag = Math.sin(animT * 1.3) * 7;
                 ctx.save();
                 ctx.translate(-dir * 25, -24 + giggleOffsetY * 0.5);
                 ctx.rotate(-dir * (0.28 + tailWag * 0.02));
@@ -1304,12 +1326,12 @@
                 ctx.fill();
                 ctx.restore();
             } else if (this.avatarType === 'arcticrabbit') {
-                const tailBob = isLaughing ? Math.sin(this.gigglePhase) * 2.0 : Math.sin(animT * 1.3) * 1.5;
+                const tailHop = Math.sin(animT * 1.8) * 2.5;
                 ctx.fillStyle = this.hurtTimer > 0 ? '#fecaca' : '#ffffff';
                 ctx.strokeStyle = '#0f172a';
-                ctx.lineWidth = 2.6;
+                ctx.lineWidth = 2.5;
                 ctx.beginPath();
-                ctx.arc(-dir * 33, -24 + giggleOffsetY * 0.5 + tailBob, 10, 0, Math.PI * 2);
+                ctx.arc(-dir * 29, -25 + giggleOffsetY * 0.5 + tailHop, 9.5, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
             }
@@ -1335,7 +1357,7 @@
             } else {
                 const pawFill = this.hurtTimer > 0
                     ? '#fecaca'
-                    : (this.avatarType === 'polarbear' || this.avatarType === 'arcticrabbit' ? '#f1f5f9' : '#7c2d12');
+                    : (this.avatarType === 'arcticfox' ? '#7c2d12' : '#f1f5f9');
                 [
                     { ox: -13 + stepB * 0.7, ly: liftB },
                     { ox: 13 + stepA * 0.7, ly: liftA }
@@ -1350,7 +1372,7 @@
                 });
             }
 
-            const bodyY = -34 + giggleOffsetY;
+            const bodyY = -34 + giggleOffsetY * 0.65;
             if (this.avatarType === 'penguin') {
                 ctx.fillStyle = this.hurtTimer > 0 ? '#ef4444' : '#1e293b';
                 ctx.strokeStyle = '#0f172a';
@@ -1364,23 +1386,23 @@
                 ctx.beginPath();
                 ctx.ellipse(dir * 5, bodyY + 2, 22, 22, 0, 0, Math.PI * 2);
                 ctx.fill();
-            } else if (this.avatarType === 'polarbear' || this.avatarType === 'arcticrabbit') {
+            } else if (this.avatarType === 'polarbear') {
                 const bearBodyGrad = ctx.createRadialGradient(-dir * 6, bodyY - 6, 6, 0, bodyY, 36);
                 bearBodyGrad.addColorStop(0, this.hurtTimer > 0 ? '#fecaca' : '#ffffff');
-                bearBodyGrad.addColorStop(1, this.hurtTimer > 0 ? '#fca5a5' : (this.avatarType === 'arcticrabbit' ? '#e0f2fe' : '#dbeafe'));
+                bearBodyGrad.addColorStop(1, this.hurtTimer > 0 ? '#fca5a5' : '#dbeafe');
                 ctx.fillStyle = bearBodyGrad;
                 ctx.strokeStyle = '#0f172a';
                 ctx.lineWidth = 3;
                 ctx.beginPath();
-                ctx.ellipse(0, bodyY, this.avatarType === 'arcticrabbit' ? 32 : 35, 27, 0, 0, Math.PI * 2);
+                ctx.ellipse(0, bodyY, 35, 27, 0, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
 
-                ctx.fillStyle = this.avatarType === 'arcticrabbit' ? '#fff1f2' : '#f8fafc';
+                ctx.fillStyle = '#f8fafc';
                 ctx.beginPath();
-                ctx.ellipse(dir * 6, bodyY + 3, 19, 17, 0, 0, Math.PI * 2);
+                ctx.ellipse(dir * 6, bodyY + 3, 21, 18, 0, 0, Math.PI * 2);
                 ctx.fill();
-            } else {
+            } else if (this.avatarType === 'arcticfox') {
                 const foxBodyGrad = ctx.createRadialGradient(-dir * 5, bodyY - 6, 5, 0, bodyY, 32);
                 foxBodyGrad.addColorStop(0, this.hurtTimer > 0 ? '#fecaca' : '#fb923c');
                 foxBodyGrad.addColorStop(1, this.hurtTimer > 0 ? '#fca5a5' : '#ea580c');
@@ -1396,9 +1418,25 @@
                 ctx.beginPath();
                 ctx.ellipse(dir * 6, bodyY + 2, 18, 19, 0, 0, Math.PI * 2);
                 ctx.fill();
+            } else {
+                const rabbitBodyGrad = ctx.createRadialGradient(-dir * 5, bodyY - 6, 5, 0, bodyY, 32);
+                rabbitBodyGrad.addColorStop(0, this.hurtTimer > 0 ? '#fecaca' : '#ffffff');
+                rabbitBodyGrad.addColorStop(1, this.hurtTimer > 0 ? '#fca5a5' : '#e0f2fe');
+                ctx.fillStyle = rabbitBodyGrad;
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.ellipse(0, bodyY, 31, 26, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#f8fafc';
+                ctx.beginPath();
+                ctx.ellipse(dir * 5, bodyY + 2, 19, 18, 0, 0, Math.PI * 2);
+                ctx.fill();
             }
 
-            const scarfWave = Math.sin(animT * 1.45) * 6 + (this.grounded ? Math.sin(this.walkPhase) * 3 : -4);
+            const scarfWave = Math.sin(animT * 1.45) * 7 + (this.grounded ? Math.sin(this.walkPhase) * 3.5 : -5);
             ctx.fillStyle = scarfColor;
             ctx.strokeStyle = '#0f172a';
             ctx.lineWidth = 2.5;
@@ -1435,7 +1473,7 @@
             ctx.lineTo(8, -45 + giggleOffsetY);
             ctx.stroke();
 
-            const headY = -74 + giggleOffsetY * 0.55;
+            const headY = -74 + giggleOffsetY;
             ctx.save();
             ctx.translate(0, headY);
 
@@ -1453,29 +1491,6 @@
                     ctx.beginPath();
                     ctx.arc(ex, -21, 5, 0, Math.PI * 2);
                     ctx.fill();
-                });
-            } else if (this.avatarType === 'arcticrabbit') {
-                const earBob = isLaughing ? Math.sin(this.gigglePhase * 0.85) * 2.2 : Math.sin(animT * 1.1) * 1.6;
-                [
-                    { bx: -13, tilt: -0.22, dy: earBob },
-                    { bx: 13,  tilt: 0.22,  dy: -earBob }
-                ].forEach(ear => {
-                    ctx.save();
-                    ctx.translate(ear.bx, -22 + ear.dy);
-                    ctx.rotate(ear.tilt);
-                    ctx.fillStyle = this.hurtTimer > 0 ? '#fecaca' : '#ffffff';
-                    ctx.strokeStyle = '#0f172a';
-                    ctx.lineWidth = 2.8;
-                    ctx.beginPath();
-                    ctx.ellipse(0, -18, 7.6, 20.5, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.stroke();
-
-                    ctx.fillStyle = '#fda4af';
-                    ctx.beginPath();
-                    ctx.ellipse(0, -18, 3.6, 13.5, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.restore();
                 });
             } else if (this.avatarType === 'arcticfox') {
                 [
@@ -1501,6 +1516,29 @@
                     ctx.closePath();
                     ctx.fill();
                 });
+            } else if (this.avatarType === 'arcticrabbit') {
+                const earFlutter = Math.sin(animT * 1.6) * 0.08;
+                [
+                    { ox: -14, tilt: -0.22 - earFlutter },
+                    { ox: 14,  tilt: 0.22 + earFlutter }
+                ].forEach(ear => {
+                    ctx.save();
+                    ctx.translate(ear.ox, -20);
+                    ctx.rotate(ear.tilt);
+                    ctx.fillStyle = this.hurtTimer > 0 ? '#fecaca' : '#ffffff';
+                    ctx.strokeStyle = '#0f172a';
+                    ctx.lineWidth = 2.8;
+                    ctx.beginPath();
+                    ctx.ellipse(0, -16, 7.5, 20, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#fbcfe8';
+                    ctx.beginPath();
+                    ctx.ellipse(0, -15, 3.8, 13, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                });
             }
 
             if (this.avatarType === 'penguin') {
@@ -1518,26 +1556,26 @@
                 ctx.arc(dir * 5 + 9, 1, 14, 0, Math.PI * 2);
                 ctx.ellipse(dir * 6, 8, 20, 15, 0, 0, Math.PI * 2);
                 ctx.fill();
-            } else if (this.avatarType === 'polarbear' || this.avatarType === 'arcticrabbit') {
+            } else if (this.avatarType === 'polarbear') {
                 const bearHeadGrad = ctx.createRadialGradient(-dir * 6, -8, 4, 0, 0, 31);
                 bearHeadGrad.addColorStop(0, this.hurtTimer > 0 ? '#fecaca' : '#ffffff');
-                bearHeadGrad.addColorStop(1, this.hurtTimer > 0 ? '#fca5a5' : (this.avatarType === 'arcticrabbit' ? '#f1f5f9' : '#e2e8f0'));
+                bearHeadGrad.addColorStop(1, this.hurtTimer > 0 ? '#fca5a5' : '#e2e8f0');
                 ctx.fillStyle = bearHeadGrad;
                 ctx.strokeStyle = '#0f172a';
                 ctx.lineWidth = 3;
                 ctx.beginPath();
-                ctx.arc(0, 0, this.avatarType === 'arcticrabbit' ? 29 : 30, 0, Math.PI * 2);
+                ctx.arc(0, 0, 30, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
 
-                ctx.fillStyle = this.avatarType === 'arcticrabbit' ? '#fff1f2' : '#ffffff';
-                ctx.strokeStyle = this.avatarType === 'arcticrabbit' ? '#fecdd3' : '#cbd5e1';
+                ctx.fillStyle = '#ffffff';
+                ctx.strokeStyle = '#cbd5e1';
                 ctx.lineWidth = 1.8;
                 ctx.beginPath();
                 ctx.ellipse(dir * 13, 8, 13.5, 10.5, 0, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
-            } else {
+            } else if (this.avatarType === 'arcticfox') {
                 const foxHeadGrad = ctx.createRadialGradient(-dir * 6, -8, 4, 0, 0, 29);
                 foxHeadGrad.addColorStop(0, this.hurtTimer > 0 ? '#fecaca' : '#fb923c');
                 foxHeadGrad.addColorStop(1, this.hurtTimer > 0 ? '#fca5a5' : '#ea580c');
@@ -1563,25 +1601,41 @@
                 ctx.beginPath();
                 ctx.ellipse(dir * 14, 8, 14, 9, 0, 0, Math.PI * 2);
                 ctx.fill();
+            } else {
+                const rabbitHeadGrad = ctx.createRadialGradient(-dir * 6, -8, 4, 0, 0, 29);
+                rabbitHeadGrad.addColorStop(0, this.hurtTimer > 0 ? '#fecaca' : '#ffffff');
+                rabbitHeadGrad.addColorStop(1, this.hurtTimer > 0 ? '#fca5a5' : '#e2e8f0');
+                ctx.fillStyle = rabbitHeadGrad;
+                ctx.strokeStyle = '#0f172a';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(0, 0, 28, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.ellipse(dir * 13, 8, 13, 9, 0, 0, Math.PI * 2);
+                ctx.fill();
             }
 
-            ctx.fillStyle = isLaughing ? 'rgba(244, 63, 94, 0.56)' : 'rgba(251, 113, 133, 0.42)';
+            ctx.fillStyle = isLaughing ? 'rgba(244, 63, 94, 0.52)' : 'rgba(251, 113, 133, 0.36)';
             ctx.beginPath();
-            ctx.ellipse(dir * 16, 7, 6.2, 3.8, 0, 0, Math.PI * 2);
-            ctx.ellipse(-dir * 3, 8, 4.5, 3.0, 0, 0, Math.PI * 2);
+            ctx.ellipse(dir * 16, 7, 5.5, 3.4, 0, 0, Math.PI * 2);
+            ctx.ellipse(-dir * 3, 8, 4.2, 2.8, 0, 0, Math.PI * 2);
             ctx.fill();
 
             const eyeX = dir * 11;
             const eyeY = -4;
             if (isLaughing) {
                 ctx.strokeStyle = '#0f172a';
-                ctx.lineWidth = 3.2;
+                ctx.lineWidth = 3;
                 ctx.lineCap = 'round';
                 ctx.beginPath();
-                ctx.arc(eyeX - 6, eyeY + 2, 5.6, Math.PI * 1.15, Math.PI * 1.85);
+                ctx.arc(eyeX - 6, eyeY + 2, 5.2, Math.PI * 1.16, Math.PI * 1.84);
                 ctx.stroke();
                 ctx.beginPath();
-                ctx.arc(eyeX + 7, eyeY + 2, 5.6, Math.PI * 1.15, Math.PI * 1.85);
+                ctx.arc(eyeX + 7, eyeY + 2, 5.2, Math.PI * 1.16, Math.PI * 1.84);
                 ctx.stroke();
             } else if (this.isBlinking) {
                 ctx.strokeStyle = '#0f172a';
@@ -1641,39 +1695,33 @@
                 ctx.stroke();
 
                 if (isLaughing) {
-                    const beakOpen = 1.4 + Math.abs(Math.sin(this.gigglePhase * 0.9)) * 1.6;
+                    const beakOpen = 1.4 + Math.abs(Math.sin(this.gigglePhase * 0.8)) * 1.5;
                     ctx.fillStyle = '#d97706';
                     ctx.beginPath();
-                    ctx.moveTo(dir * 8, 9);
-                    ctx.lineTo(dir * 21, 9 + beakOpen);
+                    ctx.moveTo(dir * 8, 9.5);
+                    ctx.lineTo(dir * 20, 9.5 + beakOpen);
                     ctx.lineTo(dir * 8, 11.5 + beakOpen);
                     ctx.closePath();
                     ctx.fill();
                     ctx.stroke();
                 }
             } else {
-                if (this.avatarType === 'arcticrabbit') {
-                    ctx.fillStyle = '#fb7185';
-                    ctx.beginPath();
-                    ctx.ellipse(dir * 17, 4, 4.6, 3.5, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.stroke();
+                ctx.fillStyle = this.avatarType === 'arcticrabbit' ? '#f472b6' : '#0f172a';
+                ctx.beginPath();
+                if (this.avatarType === 'polarbear') {
+                    ctx.ellipse(dir * 17, 4, 5.4, 3.8, 0, 0, Math.PI * 2);
+                } else if (this.avatarType === 'arcticrabbit') {
+                    ctx.ellipse(dir * 18, 4, 4.3, 3.1, 0, 0, Math.PI * 2);
                 } else {
-                    ctx.fillStyle = '#0f172a';
-                    ctx.beginPath();
-                    if (this.avatarType === 'polarbear') {
-                        ctx.ellipse(dir * 17, 4, 5.4, 3.8, 0, 0, Math.PI * 2);
-                    } else {
-                        ctx.ellipse(dir * 21, 5, 4.4, 3.2, 0, 0, Math.PI * 2);
-                    }
-                    ctx.fill();
+                    ctx.ellipse(dir * 21, 5, 4.4, 3.2, 0, 0, Math.PI * 2);
                 }
+                ctx.fill();
 
                 if (isLaughing) {
-                    const mouthPulse = 1.8 + Math.abs(Math.sin(this.gigglePhase * 0.9)) * 1.6;
+                    const mouthPulse = 1.8 + Math.abs(Math.sin(this.gigglePhase * 0.8)) * 1.5;
                     ctx.fillStyle = '#fb7185';
                     ctx.beginPath();
-                    ctx.ellipse(dir * 13, 11, 5.6, mouthPulse, 0, 0, Math.PI);
+                    ctx.ellipse(dir * 13, 11, 5.5, mouthPulse, 0, 0, Math.PI);
                     ctx.closePath();
                     ctx.fill();
                     ctx.stroke();
@@ -1713,11 +1761,11 @@
             ctx.restore();
 
             const armBob = isLaughing
-                ? Math.sin(this.gigglePhase) * 2.5
+                ? Math.sin(this.gigglePhase) * 2.2
                 : Math.sin(animT * 1.6) * 3.5;
             ctx.save();
             if (this.avatarType === 'penguin') {
-                ctx.translate(dir * 10, -34 + giggleOffsetY + armBob);
+                ctx.translate(dir * 10, -34 + giggleOffsetY * 0.65 + armBob);
                 ctx.rotate(-dir * 0.35);
                 ctx.fillStyle = '#0f172a';
                 ctx.strokeStyle = '#0f172a';
@@ -1727,25 +1775,14 @@
                 ctx.fill();
                 ctx.stroke();
             } else {
-                const armFill = this.hurtTimer > 0
-                    ? '#fecaca'
-                    : (this.avatarType === 'arcticfox' ? '#f97316' : '#ffffff');
-                ctx.fillStyle = armFill;
+                ctx.fillStyle = gloveColor;
                 ctx.strokeStyle = '#0f172a';
                 ctx.lineWidth = 2.5;
                 ctx.beginPath();
-                ctx.arc(dir * 25, -34 + giggleOffsetY + armBob, 8.8, 0, Math.PI * 2);
+                ctx.arc(dir * 26, -34 + giggleOffsetY * 0.65 + armBob, 9.0, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
             }
-
-            ctx.fillStyle = gloveColor;
-            ctx.strokeStyle = '#0f172a';
-            ctx.lineWidth = 2.4;
-            ctx.beginPath();
-            ctx.arc(dir * 27, -34 + giggleOffsetY + armBob, 7.2, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
             ctx.restore();
 
             if (this.frozenTimer > 0) {
@@ -1919,7 +1956,7 @@
             lobbyState.roomCode = customCode;
             lobbyState.roomCreated = true;
         }
-        const nick = (document.getElementById('player-nick').value || 'KışOyuncusu').trim() || 'KışOyuncusu';
+        const nick = getHumanNickname();
         const fmt = config.format || '1v1';
 
         if (!lobbyState.roomCreated) {
@@ -2124,9 +2161,26 @@
     }
 
     function refreshMenuFlow() {
+        const nickStep = document.getElementById('nickname-step');
+        const setupSteps = document.getElementById('main-setup-steps');
+        const activeNickLabel = document.getElementById('active-nick-label');
+        const nickErrorMsg = document.getElementById('nick-error-msg');
         const formatStep = document.getElementById('format-step');
         const onlineBox = document.getElementById('online-lobby-box');
         const hintMsg = document.getElementById('menu-hint-msg');
+
+        const nick = getRawNickname();
+        if (config.nicknameConfirmed && nick) {
+            nickStep.classList.add('hidden');
+            setupSteps.classList.remove('hidden');
+            if (activeNickLabel) activeNickLabel.textContent = nick;
+            if (nickErrorMsg) nickErrorMsg.classList.add('hidden');
+        } else {
+            config.nicknameConfirmed = false;
+            nickStep.classList.remove('hidden');
+            setupSteps.classList.add('hidden');
+            return;
+        }
 
         const isOnline = config.playersMode === 'online';
         onlineBox.classList.toggle('hidden', !isOnline);
@@ -2163,13 +2217,13 @@
         clampBotCounts();
 
         if (!config.playersMode) {
-            hintMsg.textContent = 'Başlamak için 1. Oyuncu Modunu (Tek Kişi veya Çevrim İçi) seçin.';
+            hintMsg.textContent = 'Başlamak için Oyun Modunu (Tek Kişi veya Çevrim İçi) seçin.';
         } else if (isOnline && !lobbyState.roomCreated) {
             hintMsg.textContent = 'Çevrim İçi modda Yeni Oda\'nın yanından 1v1/2v2 seçip Yeni Oda\'ya basın veya kod ile katılın.';
         } else if (!config.format) {
             hintMsg.textContent = 'Şimdi 1 vs 1 veya 2 vs 2 formatını seçin.';
         } else {
-            hintMsg.textContent = 'Hazır! İsterseniz maçı başlatabilir veya tuş düzenini ayarlayabilirsiniz.';
+            hintMsg.textContent = 'Hazır! İsterseniz oyunu başlatabilirsiniz.';
         }
     }
 
@@ -2181,43 +2235,61 @@
     }
 
     function startMatch() {
+        const nickInput = document.getElementById('player-nick');
+        const nick = getRawNickname();
+        if (!nick) {
+            config.nicknameConfirmed = false;
+            refreshMenuFlow();
+            const nickErr = document.getElementById('nick-error-msg');
+            if (nickErr) nickErr.classList.remove('hidden');
+            if (nickInput) {
+                nickInput.focus();
+                nickInput.classList.remove('border-sky-300');
+                nickInput.classList.add('border-rose-500');
+            }
+            return;
+        }
+        if (nickInput) {
+            nickInput.classList.remove('border-rose-500');
+            nickInput.classList.add('border-sky-300');
+        }
         if (!config.playersMode) {
-            document.getElementById('menu-hint-msg').textContent = '⚠️ Önce Tek Kişi veya Çevrim İçi modunu seçmelisiniz.';
+            document.getElementById('menu-hint-msg').textContent = '⚠️ Lütfen önce Oyun Modunu (Tek Kişi veya Çevrim İçi) seçin!';
             return;
         }
         if (config.playersMode === 'online' && !lobbyState.roomCreated) {
-            document.getElementById('menu-hint-msg').textContent = '⚠️ Önce Yeni Oda\'ya basıp format seçin veya bir odaya katılın.';
+            document.getElementById('menu-hint-msg').textContent = '⚠️ Çevrim İçi modda önce Yeni Oda kurun, odaya katılın veya Hızlı Eşleşme kullanın!';
             return;
         }
         if (!config.format) {
-            document.getElementById('menu-hint-msg').textContent = '⚠️ Lütfen 1 vs 1 veya 2 vs 2 formatını seçin.';
+            document.getElementById('menu-hint-msg').textContent = '⚠️ Lütfen 1 vs 1 veya 2 vs 2 formatını seçin!';
             return;
         }
 
         sfx.init();
+        clampBotCounts();
+
         state.round = 1;
         state.blueScore = 0;
         state.redScore = 0;
         state.players = [];
 
-        const is2v2 = config.format === '2v2';
         const isOnline = config.playersMode === 'online';
+        const is2v2 = config.format === '2v2';
 
-        if (isOnline) {
-            if (!lobbyState.slots.length) buildLobbySlots();
-            const activeSlots = lobbyState.slots.filter(s => s.isHuman || s.isBot);
-            const blues = activeSlots.filter(s => s.team === 'blue');
-            const reds = activeSlots.filter(s => s.team === 'red');
+        if (isOnline && lobbyState.roomCreated) {
+            const blues = lobbyState.slots.filter(s => s.team === 'blue' && (s.isHuman || s.isBot));
+            const reds = lobbyState.slots.filter(s => s.team === 'red' && (s.isHuman || s.isBot));
             const bPos = getSpawnPositions(blues.length, 'blue');
             const rPos = getSpawnPositions(reds.length, 'red');
 
             blues.forEach((s, i) => {
                 state.players.push(new SnowFighterCharacter({
                     id: i + 1,
-                    name: s.name,
+                    name: s.isHuman ? nick : s.name,
                     team: 'blue',
                     isHuman: s.isHuman,
-                    controlScheme: s.controlScheme,
+                    controlScheme: s.isHuman ? 'p1' : 'ai',
                     x: bPos[i] ?? 260,
                     avatarType: s.isHuman ? config.avatarType : 'polarbear',
                     aiDifficulty: s.aiDifficulty || config.difficulty || 'medium'
@@ -2226,25 +2298,25 @@
             reds.forEach((s, i) => {
                 state.players.push(new SnowFighterCharacter({
                     id: 10 + i,
-                    name: s.name,
+                    name: s.isHuman ? nick : s.name,
                     team: 'red',
                     isHuman: s.isHuman,
                     controlScheme: s.isHuman ? 'p2' : 'ai',
                     x: rPos[i] ?? (WORLD_W - 260),
-                    avatarType: 'penguin',
+                    avatarType: s.isHuman ? config.avatarType : 'penguin',
                     aiDifficulty: s.aiDifficulty || config.difficulty || 'medium'
                 }));
             });
         } else if (!is2v2) {
             state.players.push(new SnowFighterCharacter({
-                id: 1, name: 'Mavi Ayı', team: 'blue', isHuman: true, controlScheme: 'p1', x: 300, avatarType: config.avatarType
+                id: 1, name: nick, team: 'blue', isHuman: true, controlScheme: 'p1', x: 300, avatarType: config.avatarType
             }));
             state.players.push(new SnowFighterCharacter({
                 id: 2, name: 'Kırmızı Penguen', team: 'red', isHuman: false, controlScheme: 'ai', x: WORLD_W - 300, avatarType: 'penguin', aiDifficulty: config.difficulty
             }));
         } else {
             state.players.push(new SnowFighterCharacter({
-                id: 1, name: '1. Oyuncu', team: 'blue', isHuman: true, controlScheme: 'p1', x: 210, avatarType: config.avatarType
+                id: 1, name: nick, team: 'blue', isHuman: true, controlScheme: 'p1', x: 210, avatarType: config.avatarType
             }));
             state.players.push(new SnowFighterCharacter({
                 id: 2, name: 'Mavi Tilki', team: 'blue', isHuman: false, controlScheme: 'ai', x: 440, avatarType: 'arcticfox', aiDifficulty: config.difficulty
@@ -2253,7 +2325,7 @@
                 id: 3, name: 'Kırmızı Penguen', team: 'red', isHuman: false, controlScheme: 'ai', x: WORLD_W - 210, avatarType: 'penguin', aiDifficulty: config.difficulty
             }));
             state.players.push(new SnowFighterCharacter({
-                id: 4, name: 'Kızıl Ayı', team: 'red', isHuman: false, controlScheme: 'ai', x: WORLD_W - 440, avatarType: 'polarbear', aiDifficulty: config.difficulty
+                id: 4, name: 'Kızıl Tavşan', team: 'red', isHuman: false, controlScheme: 'ai', x: WORLD_W - 440, avatarType: 'arcticrabbit', aiDifficulty: config.difficulty
             }));
         }
 
@@ -2285,7 +2357,7 @@
 
         updateHUD();
         state.screen = 'roundIntro';
-        showBanner(`${state.round}. TUR BAŞLIYOR!`, 'AT tuşuna basılı tut, kesik çizgi x\'ten y\'ye ilerlesin, bırakınca fırlat!', 'neutral');
+        showBanner(`${state.round}. TUR BAŞLIYOR!`, 'AT tuşuna basılı tut, eksen x\'ten y\'ye ilerlesin, bırakınca fırlat!', 'intro');
 
         setTimeout(() => {
             if (state.screen === 'roundIntro') {
@@ -2319,11 +2391,8 @@
             updateHUD();
             sfx.playCheer();
 
-            const title = winnerTeam === 'blue'
-                ? `🏆 ${state.round}. TURU MAVİ TAKIM KAZANDI!`
-                : `🏆 ${state.round}. TURU KIRMIZI TAKIM KAZANDI!`;
-            const reasonText = timeExpired ? 'Süre doldu! ' : '';
-            showBanner(title, `${reasonText}Skor: Mavi ${state.blueScore} - ${state.redScore} Kırmızı`, winnerTeam);
+            const title = winnerTeam === 'blue' ? 'MAVİ TAKIM TURU ALDI!' : 'KIRMIZI TAKIM TURU ALDI!';
+            showBanner(title, `Skor: Mavi ${state.blueScore} - ${state.redScore} Kırmızı`, winnerTeam);
 
             setTimeout(() => {
                 hideBanner();
@@ -2333,7 +2402,7 @@
                     state.round++;
                     setupRound();
                 }
-            }, 2200);
+            }, 2100);
         }
     }
 
@@ -2344,29 +2413,27 @@
 
         const title = document.getElementById('winner-title');
         title.textContent = winnerTeam === 'blue' ? 'MAVİ TAKIM ŞAMPİYON!' : 'KIRMIZI TAKIM ŞAMPİYON!';
-        title.className = `text-2xl sm:text-3xl font-black mb-0.5 ${winnerTeam === 'blue' ? 'text-blue-700' : 'text-red-600'}`;
+        title.className = `gameover-title text-2xl sm:text-4xl font-black mb-1 ${winnerTeam === 'blue' ? 'text-blue-700' : 'text-red-600'}`;
 
         document.getElementById('winner-subtitle').textContent = `Final Skoru: Mavi ${state.blueScore} - ${state.redScore} Kırmızı`;
 
         document.getElementById('stats-container').innerHTML = state.players.map(p => {
             const badge = p.team === 'blue'
-                ? '<span class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-black text-[10px] sm:text-xs shrink-0">MAVİ</span>'
-                : '<span class="px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-black text-[10px] sm:text-xs shrink-0">KIRMIZI</span>';
+                ? '<span class="px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-black text-xs">MAVİ</span>'
+                : '<span class="px-2 py-0.5 rounded bg-red-100 text-red-700 font-black text-xs">KIRMIZI</span>';
             const acc = p.stats.throws > 0 ? Math.round((p.stats.hits / p.stats.throws) * 100) : 0;
             return `
-                <div class="flex items-center justify-between gap-1.5 bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200">
-                    <div class="flex items-center gap-1.5 min-w-0">${badge}<span class="font-extrabold text-slate-800 truncate text-xs sm:text-sm">${p.name}</span></div>
-                    <div class="flex items-center gap-2 text-[11px] sm:text-xs font-bold text-slate-600 shrink-0">
-                        <span>🎯 <b>%${acc}</b></span>
-                        <span>💥 <b>${p.stats.damage}</b></span>
+                <div class="gameover-stat-row flex items-center justify-between bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
+                    <div class="flex items-center gap-2">${badge}<span class="font-extrabold text-slate-800">${p.name}</span></div>
+                    <div class="flex items-center gap-3 text-xs font-bold text-slate-600">
+                        <span>🎯 İsabet: <b>%${acc}</b></span>
+                        <span>💥 Hasar: <b>${p.stats.damage}</b></span>
                     </div>
                 </div>
             `;
         }).join('');
 
-        const modal = document.getElementById('gameover-modal');
-        modal.classList.remove('hidden');
-        modal.scrollTop = 0;
+        document.getElementById('gameover-modal').classList.remove('hidden');
     }
 
     function updateHUD() {
@@ -2387,46 +2454,38 @@
         const blueBars = document.getElementById('blue-hp-bars');
         const redBars = document.getElementById('red-hp-bars');
         blueBars.innerHTML = state.players.filter(p => p.team === 'blue').map(p => `
-            <div class="w-full h-1.5 sm:h-2 bg-slate-900/80 rounded-full overflow-hidden border border-blue-300/40">
+            <div class="w-full h-2 sm:h-2.5 bg-slate-900/80 rounded-full overflow-hidden border border-blue-300/40">
                 <div class="h-full bg-gradient-to-r from-sky-400 to-emerald-400 transition-all duration-150" style="width:${(p.hp / p.maxHp) * 100}%"></div>
             </div>
         `).join('');
 
         redBars.innerHTML = state.players.filter(p => p.team === 'red').map(p => `
-            <div class="w-full h-1.5 sm:h-2 bg-slate-900/80 rounded-full overflow-hidden border border-red-300/40">
+            <div class="w-full h-2 sm:h-2.5 bg-slate-900/80 rounded-full overflow-hidden border border-red-300/40">
                 <div class="h-full bg-gradient-to-l from-amber-400 to-rose-500 transition-all duration-150 ml-auto" style="width:${(p.hp / p.maxHp) * 100}%"></div>
             </div>
         `).join('');
     }
 
-    function showBanner(title, sub, tone = 'neutral') {
-        const overlay = document.getElementById('banner-overlay');
+    function showBanner(title, sub, theme = 'intro') {
         const card = document.getElementById('banner-card');
         const titleEl = document.getElementById('banner-title');
-        const subEl = document.getElementById('banner-subtitle');
-
-        titleEl.textContent = title;
-        subEl.textContent = sub;
-
-        if (tone === 'blue') {
-            card.className = 'bg-blue-950/95 border-4 border-sky-400 rounded-3xl px-8 py-5 text-center shadow-[0_0_50px_rgba(56,189,248,0.6)] max-w-xl w-full';
-            titleEl.className = 'text-2xl sm:text-4xl font-black text-sky-300 drop-shadow mb-1.5';
-        } else if (tone === 'red') {
-            card.className = 'bg-red-950/95 border-4 border-rose-400 rounded-3xl px-8 py-5 text-center shadow-[0_0_50px_rgba(251,113,133,0.6)] max-w-xl w-full';
-            titleEl.className = 'text-2xl sm:text-4xl font-black text-rose-300 drop-shadow mb-1.5';
-        } else {
-            card.className = 'bg-slate-900/95 border-4 border-amber-400 rounded-3xl px-8 py-5 text-center shadow-[0_0_50px_rgba(251,191,36,0.55)] max-w-xl w-full';
-            titleEl.className = 'text-2xl sm:text-4xl font-black text-amber-300 drop-shadow mb-1.5';
+        if (card && titleEl) {
+            if (theme === 'blue') {
+                card.className = 'bg-blue-950/95 border-4 border-sky-400 rounded-3xl px-7 py-5 text-center shadow-[0_0_45px_rgba(56,189,248,0.5)] max-w-lg w-full';
+                titleEl.className = 'text-2xl sm:text-4xl font-black text-sky-300 drop-shadow mb-1';
+            } else if (theme === 'red') {
+                card.className = 'bg-rose-950/95 border-4 border-rose-400 rounded-3xl px-7 py-5 text-center shadow-[0_0_45px_rgba(251,113,133,0.5)] max-w-lg w-full';
+                titleEl.className = 'text-2xl sm:text-4xl font-black text-rose-300 drop-shadow mb-1';
+            } else {
+                card.className = 'bg-slate-900/95 border-4 border-amber-400 rounded-3xl px-7 py-5 text-center shadow-[0_0_45px_rgba(251,191,36,0.45)] max-w-lg w-full';
+                titleEl.className = 'text-2xl sm:text-4xl font-black text-amber-300 drop-shadow mb-1';
+            }
         }
-
-        overlay.classList.remove('hidden');
-        overlay.style.display = 'flex';
+        document.getElementById('banner-title').textContent = title;
+        document.getElementById('banner-subtitle').textContent = sub;
+        document.getElementById('banner-overlay').classList.remove('hidden');
     }
-    function hideBanner() {
-        const overlay = document.getElementById('banner-overlay');
-        overlay.classList.add('hidden');
-        overlay.style.display = 'none';
-    }
+    function hideBanner() { document.getElementById('banner-overlay').classList.add('hidden'); }
 
     function update(dt) {
         for (const f of state.snowflakes) {
@@ -2728,38 +2787,34 @@
     }
 
     function render() {
-        if (!canvas || !ctx) return;
-        if (canvas.width <= 1 || canvas.height <= 1) {
-            resizeCanvas();
-        }
-        ctx.save();
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.scale(scaleX, scaleY);
-        if (viewOffsetY > 0) {
-            ctx.translate(0, -viewOffsetY);
-        }
-        if (state.shakeTime > 0) {
-            ctx.translate(rand(-state.shakePower, state.shakePower), rand(-state.shakePower, state.shakePower));
-        }
-        drawSideArena(ctx);
-        drawMysteryBoxes(ctx);
-        drawIcicles(ctx);
-        for (const p of state.players) p.draw(ctx);
-        drawSnowballs(ctx);
-        drawOverlayEffects(ctx);
-        ctx.restore();
+        try {
+            if (!canvas.width || !canvas.height) resizeCanvas();
+            ctx.save();
+            ctx.scale(scaleX, scaleY);
+            if (viewOffsetY > 0) {
+                ctx.translate(0, -viewOffsetY);
+            }
+            if (state.shakeTime > 0) {
+                ctx.translate(rand(-state.shakePower, state.shakePower), rand(-state.shakePower, state.shakePower));
+            }
+            drawSideArena(ctx);
+            drawMysteryBoxes(ctx);
+            drawIcicles(ctx);
+            for (const p of state.players) p.draw(ctx);
+            drawSnowballs(ctx);
+            drawOverlayEffects(ctx);
+            ctx.restore();
+        } catch (_) {}
     }
 
     let lastTime = performance.now();
     function gameLoop(now) {
         try {
-            const dt = Math.min(0.05, (now - lastTime) / 1000);
+            const dt = Math.min(0.05, Math.max(0, (now - lastTime) / 1000));
             lastTime = now;
             update(dt);
             render();
-        } catch (err) {
-            console.error('Oyun döngüsü hatası:', err);
-        }
+        } catch (_) {}
         requestAnimationFrame(gameLoop);
     }
 
@@ -2772,95 +2827,119 @@
     window.addEventListener('keyup', e => { keys[e.code] = false; });
 
     function clientToWorld(clientX, clientY) {
-        const rect = canvas ? canvas.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+        const rect = canvas.getBoundingClientRect();
         return {
             wx: ((clientX - rect.left) / Math.max(1, rect.width)) * WORLD_W,
-            wy: (((clientY - rect.top) / Math.max(1, rect.height)) * (canvas.height / Math.max(0.01, scaleY))) + viewOffsetY
+            wy: (((clientY - rect.top) / Math.max(1, rect.height)) * (canvas.height / scaleY)) + viewOffsetY
         };
     }
 
-    if (canvas) {
-        canvas.addEventListener('mousemove', e => {
-            const { wx, wy } = clientToWorld(e.clientX, e.clientY);
-            aimInput.mouseWorldX = wx;
-            aimInput.mouseWorldY = wy;
-            aimInput.mouseActive = true;
-        });
+    canvas.addEventListener('mousemove', e => {
+        const { wx, wy } = clientToWorld(e.clientX, e.clientY);
+        aimInput.mouseWorldX = wx;
+        aimInput.mouseWorldY = wy;
+        aimInput.mouseActive = true;
+    });
 
-        canvas.addEventListener('mousedown', e => {
-            if (e.button !== 0 || state.screen !== 'playing') return;
-            sfx.init();
-            const { wx, wy } = clientToWorld(e.clientX, e.clientY);
-            aimInput.mouseWorldX = wx;
-            aimInput.mouseWorldY = wy;
-            aimInput.mouseActive = true;
-            aimInput.mouseCharging = true;
-        });
-    }
+    canvas.addEventListener('mousedown', e => {
+        if (e.button !== 0 || state.screen !== 'playing') return;
+        sfx.init();
+        const { wx, wy } = clientToWorld(e.clientX, e.clientY);
+        aimInput.mouseWorldX = wx;
+        aimInput.mouseWorldY = wy;
+        aimInput.mouseActive = true;
+        aimInput.mouseCharging = true;
+    });
 
     window.addEventListener('mouseup', e => {
-        if (e.button === 0) aimInput.mouseCharging = false;
+        if (e.button !== 0) return;
+        if (aimInput.mouseCharging && state.screen === 'playing') {
+            const p1 = state.players.find(p => p.isHuman && p.isAlive);
+            if (p1 && p1.charging && p1.cooldown <= 0) {
+                p1.fireSnowball();
+                p1.charging = false;
+            }
+        }
+        aimInput.mouseCharging = false;
     });
 
     function bindTouchButton(id, prop) {
         const el = document.getElementById(id);
-        let dragging = false;
+        let draggingPad = false;
         let dragOffset = { x: 0, y: 0 };
 
         const startDrag = (clientX, clientY) => {
-            dragging = true;
+            if (!config.touchLayoutEditing) return false;
+            draggingPad = true;
             const rect = el.getBoundingClientRect();
             dragOffset = { x: clientX - rect.left, y: clientY - rect.top };
             el.style.position = 'fixed';
-            el.style.left = `${rect.left}px`;
-            el.style.top = `${rect.top}px`;
             el.style.right = 'auto';
             el.style.bottom = 'auto';
             el.style.zIndex = '40';
+            return true;
         };
 
         const moveDrag = (clientX, clientY) => {
-            if (!dragging) return;
+            if (!draggingPad) return false;
             const maxX = Math.max(0, window.innerWidth - el.offsetWidth);
             const maxY = Math.max(0, window.innerHeight - el.offsetHeight);
-            el.style.left = `${clamp(clientX - dragOffset.x, 0, maxX)}px`;
-            el.style.top = `${clamp(clientY - dragOffset.y, 0, maxY)}px`;
+            const nx = clamp(clientX - dragOffset.x, 0, maxX);
+            const ny = clamp(clientY - dragOffset.y, 0, maxY);
+            el.style.left = `${nx}px`;
+            el.style.top = `${ny}px`;
+            return true;
         };
 
-        const endDrag = () => { dragging = false; };
+        const stopDrag = () => {
+            if (!draggingPad) return false;
+            draggingPad = false;
+            return true;
+        };
 
-        const onDown = (e) => {
-            e.preventDefault();
+        const press = (e) => {
             if (config.touchLayoutEditing) {
-                const pt = e.touches ? e.touches[0] : e;
+                e.preventDefault();
+                const pt = e.touches && e.touches[0] ? e.touches[0] : e;
                 startDrag(pt.clientX, pt.clientY);
                 return;
             }
+            e.preventDefault();
             sfx.init();
             touchState[prop] = true;
             el.classList.add('pressed');
         };
-        const onUp = (e) => {
+
+        const move = (e) => {
+            if (!draggingPad) return;
             e.preventDefault();
-            if (dragging) {
-                endDrag();
+            const pt = e.touches && e.touches[0] ? e.touches[0] : e;
+            moveDrag(pt.clientX, pt.clientY);
+        };
+
+        const release = (e) => {
+            if (stopDrag()) {
+                e.preventDefault();
                 return;
             }
+            e.preventDefault();
             touchState[prop] = false;
             el.classList.remove('pressed');
         };
-        el.addEventListener('touchstart', onDown, { passive: false });
-        el.addEventListener('touchmove', e => {
-            if (!dragging) return;
-            e.preventDefault();
-            const pt = e.touches[0];
-            moveDrag(pt.clientX, pt.clientY);
-        }, { passive: false });
-        el.addEventListener('touchend', onUp);
-        el.addEventListener('touchcancel', onUp);
-        el.addEventListener('mousedown', onDown);
-        window.addEventListener('mousemove', e => moveDrag(e.clientX, e.clientY));
-        window.addEventListener('mouseup', onUp);
+
+        el.addEventListener('touchstart', press, { passive: false });
+        el.addEventListener('touchmove', move, { passive: false });
+        el.addEventListener('touchend', release);
+        el.addEventListener('touchcancel', release);
+        el.addEventListener('mousedown', press);
+        window.addEventListener('mousemove', move);
+        window.addEventListener('mouseup', release);
+        el.addEventListener('mouseleave', () => {
+            if (!config.touchLayoutEditing) {
+                touchState[prop] = false;
+                el.classList.remove('pressed');
+            }
+        });
     }
     bindTouchButton('t-left', 'left');
     bindTouchButton('t-right', 'right');
@@ -2958,7 +3037,6 @@
         }
     });
 
-    const touchToggle = document.getElementById('toggle-touch-ui');
     const touchControlsEl = document.getElementById('touch-controls');
     const padEditBar = document.getElementById('btn-edit-touch-layout');
 
@@ -2968,8 +3046,6 @@
             window.matchMedia('(max-width: 900px)').matches ||
             window.matchMedia('(pointer: coarse)').matches;
     }
-
-    if (isMobileViewportOrTouch()) touchToggle.checked = true;
 
     function applyTouchEditVisuals() {
         padEditBar.classList.toggle('hidden', !config.touchLayoutEditing);
@@ -2982,7 +3058,6 @@
     function setPadEditMode(enabled) {
         config.touchLayoutEditing = Boolean(enabled);
         if (config.touchLayoutEditing) {
-            touchToggle.checked = true;
             touchState.left = false;
             touchState.right = false;
             touchState.jump = false;
@@ -3020,31 +3095,17 @@
         });
     }
 
-    document.getElementById('btn-open-pad-editor').addEventListener('click', () => setPadEditMode(true));
     document.getElementById('btn-ingame-pad-editor').addEventListener('click', () => setPadEditMode(!config.touchLayoutEditing));
     document.getElementById('btn-done-touch-layout').addEventListener('click', () => setPadEditMode(false));
     document.getElementById('btn-reset-touch-layout').addEventListener('click', resetTouchLayoutPositions);
 
     function syncTouchVisibility() {
         const isInMatch = state.screen === 'playing' || state.screen === 'roundIntro' || state.screen === 'roundEnd';
-        if (isMobileViewportOrTouch() && isInMatch) {
-            touchToggle.checked = true;
-        }
-        const visible = config.touchLayoutEditing || ((touchToggle.checked || isMobileViewportOrTouch()) && isInMatch);
+        const visible = config.touchLayoutEditing || (isMobileViewportOrTouch() && isInMatch);
         touchControlsEl.classList.toggle('hidden', !visible);
         touchControlsEl.style.display = visible ? 'block' : 'none';
     }
-    window.addEventListener('resize', () => {
-        if (isMobileViewportOrTouch()) touchToggle.checked = true;
-        syncTouchVisibility();
-    });
-    touchToggle.addEventListener('change', () => {
-        if (touchToggle.checked && state.screen === 'menu' && !config.touchLayoutEditing) {
-            setPadEditMode(true);
-            return;
-        }
-        syncTouchVisibility();
-    });
+    window.addEventListener('resize', syncTouchVisibility);
 
     document.querySelectorAll('.avatar-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -3068,6 +3129,8 @@
                 renderLobby();
             } else {
                 lobbyState.roomCreated = false;
+                config.format = null;
+                document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('active'));
                 config.bots = { blue: 0, red: 1 };
                 config.botDifficulties = [config.difficulty || 'medium'];
             }
@@ -3140,8 +3203,87 @@
     });
 
     document.getElementById('player-nick').addEventListener('input', () => {
+        const nickInput = document.getElementById('player-nick');
+        if (nickInput && getRawNickname()) {
+            nickInput.classList.remove('border-rose-500');
+            nickInput.classList.add('border-sky-300');
+            const nickErr = document.getElementById('nick-error-msg');
+            if (nickErr) nickErr.classList.add('hidden');
+        }
         if (config.playersMode === 'online' && lobbyState.roomCreated) buildLobbySlots();
+        if (config.nicknameConfirmed) refreshMenuFlow();
     });
+
+    function handleContinueFromNickname(e) {
+        if (e && e.cancelable) e.preventDefault();
+        const nickInput = document.getElementById('player-nick');
+        const nick = getRawNickname();
+        const nickErr = document.getElementById('nick-error-msg');
+        if (!nick) {
+            config.nicknameConfirmed = false;
+            if (nickErr) nickErr.classList.remove('hidden');
+            if (nickInput) {
+                nickInput.focus();
+                nickInput.classList.remove('border-sky-300');
+                nickInput.classList.add('border-rose-500');
+            }
+            return;
+        }
+        config.nicknameConfirmed = true;
+        if (nickErr) nickErr.classList.add('hidden');
+        if (nickInput) {
+            nickInput.classList.remove('border-rose-500');
+            nickInput.classList.add('border-sky-300');
+        }
+        refreshMenuFlow();
+    }
+
+    const continueNickBtn = document.getElementById('btn-nick-continue');
+    if (continueNickBtn) {
+        continueNickBtn.addEventListener('click', handleContinueFromNickname);
+    }
+
+    const changeNickBtn = document.getElementById('btn-change-nick');
+    if (changeNickBtn) {
+        changeNickBtn.addEventListener('click', () => {
+            config.nicknameConfirmed = false;
+            refreshMenuFlow();
+            const nickInput = document.getElementById('player-nick');
+            if (nickInput) nickInput.focus();
+        });
+    }
+
+    const nickField = document.getElementById('player-nick');
+    if (nickField) {
+        nickField.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleContinueFromNickname(e);
+            }
+        });
+    }
+
+    // Kurallar bilgi işareti: yalnızca basılı tutulduğunda görünür, bırakılınca kaybolur
+    const rulesBtn = document.getElementById('btn-rules-info');
+    const rulesPopover = document.getElementById('rules-hold-popover');
+    function showRulesHold(e) {
+        if (e && e.cancelable) e.preventDefault();
+        rulesPopover.classList.remove('hidden');
+    }
+    function hideRulesHold() {
+        rulesPopover.classList.add('hidden');
+    }
+    if (rulesBtn && rulesPopover) {
+        rulesBtn.addEventListener('pointerdown', showRulesHold);
+        rulesBtn.addEventListener('touchstart', showRulesHold, { passive: false });
+        rulesBtn.addEventListener('mousedown', showRulesHold);
+        window.addEventListener('pointerup', hideRulesHold);
+        window.addEventListener('pointercancel', hideRulesHold);
+        window.addEventListener('touchend', hideRulesHold);
+        window.addEventListener('touchcancel', hideRulesHold);
+        window.addEventListener('mouseup', hideRulesHold);
+        window.addEventListener('blur', hideRulesHold);
+    }
 
     document.querySelectorAll('.emoji-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -3186,7 +3328,6 @@
         lastTime = performance.now();
         requestAnimationFrame(gameLoop);
     };
-    requestAnimationFrame(gameLoop);
     </script>
 </body>
 </html>
