@@ -11,6 +11,9 @@
     <style>
         * {
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .no-select {
             user-select: none;
             -webkit-user-select: none;
         }
@@ -30,6 +33,10 @@
         body.match-active {
             overflow: hidden;
             height: 100dvh;
+        }
+        #player-nick, #join-room-input {
+            user-select: text;
+            -webkit-user-select: text;
         }
         #gameCanvas {
             position: fixed;
@@ -175,7 +182,7 @@
 <body class="relative w-full h-full overflow-hidden">
 
     <!-- Dikey Ekran Uyarısı -->
-    <div id="portrait-warning" class="fixed inset-0 z-50 bg-slate-950/95 text-white flex-col items-center justify-center p-6 text-center">
+    <div id="portrait-warning" class="no-select fixed inset-0 z-50 bg-slate-950/95 text-white flex-col items-center justify-center p-6 text-center">
         <div class="text-6xl mb-4 animate-bounce">📱🔄</div>
         <h2 class="text-2xl font-bold text-sky-300 mb-2">Ekranı Yatay Çevirin</h2>
         <p class="text-slate-300 text-sm mb-4">Kartopu Savaşı geniş yatay sahada en keyifli şekilde oynanır!</p>
@@ -185,7 +192,7 @@
     </div>
 
     <!-- ÜST BİLGİ ÇUBUĞU (HUD) -->
-    <div id="hud" class="hidden fixed top-0 left-0 right-0 z-20 pointer-events-none px-2 sm:px-5 pt-1.5 sm:pt-2 flex flex-col items-center gap-1">
+    <div id="hud" class="no-select hidden fixed top-0 left-0 right-0 z-20 pointer-events-none px-2 sm:px-5 pt-1.5 sm:pt-2 flex flex-col items-center gap-1">
         <!-- Üst Orta Satır: Mavi Takım - Skor/Sayaç - Kırmızı Takım -->
         <div class="flex items-center justify-center gap-1.5 sm:gap-3 max-w-full">
             <!-- Mavi Takım -->
@@ -246,7 +253,7 @@
     </div>
 
     <!-- Tur / Sonuç Duyuru Bannerı -->
-    <div id="banner-overlay" class="hidden fixed inset-0 z-[35] pointer-events-none flex items-center justify-center px-4">
+    <div id="banner-overlay" class="no-select hidden fixed inset-0 z-[35] pointer-events-none flex items-center justify-center px-4">
         <div id="banner-card" class="bg-slate-900/95 border-4 border-amber-400 rounded-3xl px-7 py-5 text-center shadow-[0_0_45px_rgba(251,191,36,0.45)] max-w-lg w-full">
             <h2 id="banner-title" class="text-2xl sm:text-4xl font-black text-amber-300 drop-shadow mb-1">1. TUR BAŞLIYOR!</h2>
             <p id="banner-subtitle" class="text-white text-xs sm:text-base font-bold">AT tuşuna basılı tut, eksen x'ten y'ye ilerlesin, bırakınca fırlat!</p>
@@ -254,7 +261,7 @@
     </div>
 
     <!-- DOKUNMATİK KONTROLLER -->
-    <div id="touch-controls" class="hidden fixed inset-0 z-20 pointer-events-none">
+    <div id="touch-controls" class="no-select hidden fixed inset-0 z-20 pointer-events-none">
         <div id="btn-edit-touch-layout" class="hidden pointer-events-auto fixed top-16 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-slate-900/95 border-2 border-amber-400 text-white px-4 py-1.5 rounded-full shadow-xl text-xs font-black">
             <span>✋ Tuşları Sürükleyip Konumlandır</span>
             <button id="btn-reset-touch-layout" type="button" class="px-2 py-0.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-[11px] font-bold cursor-pointer">Sıfırla</button>
@@ -283,7 +290,7 @@
         </div>
     </div>
 
-    <!-- ANA MENÜ (KARLI KIŞ TEMASI + İLK EKRAN: KARTOPU SAVAŞI & KULLANICI ADI) -->
+    <!-- ANA MENÜ -->
     <div id="main-menu" class="fixed inset-0 z-30 flex items-center justify-center p-3 sm:p-5 bg-gradient-to-b from-sky-950/75 via-blue-950/65 to-slate-950/80 backdrop-blur-[2px] overflow-y-auto">
         <div class="arcade-panel rounded-3xl max-w-4xl w-full p-4 sm:p-6 text-slate-800 relative my-auto">
             <div class="text-center mb-3 sm:mb-4">
@@ -412,7 +419,7 @@
                     <div id="lobby-status-msg" class="text-[11px] font-bold text-sky-800 mt-2">Yeni Oda'nın yanından 1v1 veya 2v2 seçip Yeni Oda'ya basın veya oda kodu ile katılın.</div>
                 </div>
 
-                <!-- Kontrol Bilgisi + Basılı Tutunca Açılan Kurallar Bilgi İşareti -->
+                <!-- Kontrol Bilgisi + Bilgi İşareti -->
                 <div class="relative bg-sky-50 rounded-2xl p-2.5 border-2 border-sky-200 mb-3 text-xs">
                     <div class="flex items-center justify-between gap-2">
                         <div class="font-black text-sky-900 flex items-center gap-1.5">
@@ -427,14 +434,19 @@
                         <div><b>AT / Space</b> basılı tutarken eksen x'ten y'ye ilerler, bırakınca atar.</div>
                     </div>
 
-                    <!-- Yalnızca bilgi işaretine basılı tutulduğunda görünen kurallar kartı -->
-                    <div id="rules-hold-popover" class="hidden absolute right-2 bottom-9 z-40 w-72 sm:w-80 bg-slate-900/96 text-white border-2 border-amber-400 rounded-2xl p-3 shadow-2xl text-[11px] leading-relaxed pointer-events-none">
-                        <div class="font-black text-amber-300 mb-1">📜 Oyun Kuralları &amp; İpuçları</div>
-                        <ul class="space-y-1 text-slate-100 font-medium list-disc pl-4">
+                    <div id="rules-hold-popover" class="hidden fixed sm:absolute left-3 right-3 sm:left-auto sm:right-2 bottom-16 sm:bottom-9 z-40 sm:w-88 bg-slate-900 text-white border-2 border-amber-400 rounded-2xl p-3.5 shadow-2xl text-xs leading-relaxed">
+                        <div class="flex items-center justify-between gap-2 mb-1.5">
+                            <span class="font-black text-amber-300 text-xs sm:text-sm">📜 Oyun Kuralları &amp; İpuçları</span>
+                            <button id="btn-close-rules" type="button" class="px-2 py-0.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-amber-200 text-[11px] font-black cursor-pointer">
+                                Kapat ✕
+                            </button>
+                        </div>
+                        <ul class="space-y-1.5 text-slate-100 font-semibold list-disc pl-4">
                             <li>3 tur kazanan takım şampiyon olur; her tur süresi 60 saniyedir.</li>
                             <li><b>AT / Space</b> basılı tutulurken nişan açısı x'ten y'ye ilerler, bırakınca atılır.</li>
                             <li>Orta buz engelinde 3 saniye bekleyince tepeden buz sarkıtı düşer.</li>
                             <li>Kutular <b>Dev Kartopu</b>, <b>Buz Dondurucu</b>, <b>Seri Atış</b> ve <b>Süper Zıplama + Kalkan</b> verir.</li>
+                            <li>Kartopları havada çarpışınca birbirini parçalayarak yok eder.</li>
                         </ul>
                     </div>
                 </div>
@@ -450,7 +462,7 @@
     </div>
 
     <!-- MAÇ SONU EKRANI -->
-    <div id="gameover-modal" class="hidden fixed inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
+    <div id="gameover-modal" class="no-select hidden fixed inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
         <div class="arcade-panel gameover-card rounded-3xl max-w-lg w-full p-5 sm:p-6 text-center">
             <div class="gameover-trophy text-5xl sm:text-6xl mb-2">🏆</div>
             <h2 id="winner-title" class="gameover-title text-2xl sm:text-4xl font-black text-blue-700 mb-1">MAVİ TAKIM KAZANDI!</h2>
@@ -643,7 +655,7 @@
 
     const WORLD_W = 1600;
     const WORLD_H = 720;
-    const GROUND_Y = 615;
+    const GROUND_Y = 535;
     const GRAVITY = 1950;
     const MOUND_X = WORLD_W / 2;
     const MOUND_W = 86;
@@ -1844,6 +1856,120 @@
         }
     }
 
+    function drawSideArena(ctx) {
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+        skyGrad.addColorStop(0, '#071326');
+        skyGrad.addColorStop(0.55, '#1d4ed8');
+        skyGrad.addColorStop(1, '#bae6fd');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, WORLD_W, GROUND_Y);
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.beginPath();
+        ctx.arc(WORLD_W - 180, 105, 42, 0, Math.PI * 2);
+        ctx.fill();
+
+        const drawCloud = (cx, cy, s) => {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.78)';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 24 * s, 0, Math.PI * 2);
+            ctx.arc(cx + 22 * s, cy - 6 * s, 28 * s, 0, Math.PI * 2);
+            ctx.arc(cx + 46 * s, cy, 22 * s, 0, Math.PI * 2);
+            ctx.fill();
+        };
+        drawCloud(220, 115, 1.0);
+        drawCloud(640, 88, 0.85);
+        drawCloud(1060, 122, 1.05);
+
+        ctx.fillStyle = '#334155';
+        ctx.beginPath();
+        ctx.moveTo(0, GROUND_Y);
+        ctx.lineTo(0, GROUND_Y - 110);
+        ctx.lineTo(260, GROUND_Y - 255);
+        ctx.lineTo(540, GROUND_Y - 120);
+        ctx.lineTo(820, GROUND_Y - 280);
+        ctx.lineTo(1120, GROUND_Y - 125);
+        ctx.lineTo(1380, GROUND_Y - 235);
+        ctx.lineTo(WORLD_W, GROUND_Y - 115);
+        ctx.lineTo(WORLD_W, GROUND_Y);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#e2e8f0';
+        [
+            [260, GROUND_Y - 255, 215, GROUND_Y - 210, 305, GROUND_Y - 210],
+            [820, GROUND_Y - 280, 770, GROUND_Y - 230, 870, GROUND_Y - 230],
+            [1380, GROUND_Y - 235, 1335, GROUND_Y - 192, 1425, GROUND_Y - 192]
+        ].forEach(([x1, y1, x2, y2, x3, y3]) => {
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.lineTo(x3, y3);
+            ctx.closePath();
+            ctx.fill();
+        });
+
+        const drawPine = (px, py, s) => {
+            ctx.save();
+            ctx.translate(px, py);
+            ctx.scale(s, s);
+            ctx.fillStyle = '#451a03';
+            ctx.fillRect(-5, -14, 10, 14);
+            ctx.fillStyle = '#14532d';
+            [0, -18, -34].forEach(oy => {
+                ctx.beginPath();
+                ctx.moveTo(0, oy - 34);
+                ctx.lineTo(-24, oy - 8);
+                ctx.lineTo(24, oy - 8);
+                ctx.closePath();
+                ctx.fill();
+            });
+            ctx.restore();
+        };
+        [95, 165, 490, 1110, 1455, 1525].forEach((tx, idx) => {
+            drawPine(tx, GROUND_Y, idx % 2 === 0 ? 1.0 : 0.82);
+        });
+
+        const moundGrad = ctx.createLinearGradient(0, GROUND_Y - MOUND_H, 0, GROUND_Y);
+        moundGrad.addColorStop(0, '#ffffff');
+        moundGrad.addColorStop(0.45, '#bae6fd');
+        moundGrad.addColorStop(1, '#0284c7');
+        ctx.fillStyle = moundGrad;
+        ctx.strokeStyle = '#0369a1';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.roundRect(MOUND_X - MOUND_W / 2, GROUND_Y - MOUND_H, MOUND_W, MOUND_H + 6, [28, 28, 0, 0]);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(0, GROUND_Y, WORLD_W, 24);
+
+        const iceFloorGrad = ctx.createLinearGradient(0, GROUND_Y + 24, 0, WORLD_H);
+        iceFloorGrad.addColorStop(0, '#7dd3fc');
+        iceFloorGrad.addColorStop(1, '#0369a1');
+        ctx.fillStyle = iceFloorGrad;
+        ctx.fillRect(0, GROUND_Y + 24, WORLD_W, WORLD_H - (GROUND_Y + 24));
+    }
+
+    function drawIcicles(ctx) {
+        for (const ic of state.icicles) {
+            ctx.save();
+            ctx.translate(ic.x, ic.y);
+            ctx.fillStyle = '#bae6fd';
+            ctx.strokeStyle = '#0284c7';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(-ic.halfWidth, -ic.length);
+            ctx.lineTo(ic.halfWidth, -ic.length);
+            ctx.lineTo(0, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+
     function spawnIcicleAbovePlayer(player) {
         const dropX = clamp(player.x + rand(-24, 24), MOUND_X - CAMP_ZONE_HALF_W + 20, MOUND_X + CAMP_ZONE_HALF_W - 20);
         state.icicles.push({
@@ -2661,81 +2787,31 @@
                 }
             }
         }
-    }
 
-    function drawSideArena(ctx) {
-        const skyGrad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
-        skyGrad.addColorStop(0, '#071326');
-        skyGrad.addColorStop(0.55, '#1d4ed8');
-        skyGrad.addColorStop(1, '#bae6fd');
-        ctx.fillStyle = skyGrad;
-        ctx.fillRect(0, 0, WORLD_W, GROUND_Y);
+        const destroyedIndices = new Set();
+        for (let a = 0; a < state.snowballs.length; a++) {
+            if (destroyedIndices.has(a)) continue;
+            const sbA = state.snowballs[a];
+            for (let b = a + 1; b < state.snowballs.length; b++) {
+                if (destroyedIndices.has(b)) continue;
+                const sbB = state.snowballs[b];
+                if (sbA.team === sbB.team) continue;
 
-        ctx.fillStyle = '#334155';
-        ctx.beginPath();
-        ctx.moveTo(0, GROUND_Y);
-        ctx.lineTo(0, 420);
-        ctx.lineTo(260, 255);
-        ctx.lineTo(540, 410);
-        ctx.lineTo(800, 225);
-        ctx.lineTo(1120, 395);
-        ctx.lineTo(1400, 265);
-        ctx.lineTo(WORLD_W, 385);
-        ctx.lineTo(WORLD_W, GROUND_Y);
-        ctx.closePath();
-        ctx.fill();
+                if (dist(sbA.x, sbA.y, sbB.x, sbB.y) < sbA.radius + sbB.radius) {
+                    destroyedIndices.add(a);
+                    destroyedIndices.add(b);
+                    const midX = (sbA.x + sbB.x) * 0.5;
+                    const midY = (sbA.y + sbB.y) * 0.5;
+                    spawnSnowPuff(midX, midY, 20, '#ffffff');
+                    spawnFloatingText(midX, midY - 12, '❄️ ÇARPIŞMA!', '#e0f2fe');
+                    sfx.playHit(sbA.isMega || sbB.isMega);
+                    break;
+                }
+            }
+        }
 
-        ctx.save();
-        ctx.strokeStyle = 'rgba(125, 211, 252, 0.38)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([7, 7]);
-        ctx.beginPath();
-        ctx.moveTo(MOUND_X - CAMP_ZONE_HALF_W, GROUND_Y);
-        ctx.lineTo(MOUND_X + CAMP_ZONE_HALF_W, GROUND_Y);
-        ctx.stroke();
-        ctx.restore();
-
-        const moundGrad = ctx.createLinearGradient(0, GROUND_Y - MOUND_H, 0, GROUND_Y);
-        moundGrad.addColorStop(0, '#ffffff');
-        moundGrad.addColorStop(0.45, '#bae6fd');
-        moundGrad.addColorStop(1, '#0284c7');
-        ctx.fillStyle = moundGrad;
-        ctx.strokeStyle = '#0369a1';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.roundRect(MOUND_X - MOUND_W / 2, GROUND_Y - MOUND_H, MOUND_W, MOUND_H + 6, [28, 28, 0, 0]);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = '#f8fafc';
-        ctx.fillRect(0, GROUND_Y, WORLD_W, 24);
-
-        const iceFloorGrad = ctx.createLinearGradient(0, GROUND_Y + 24, 0, WORLD_H);
-        iceFloorGrad.addColorStop(0, '#7dd3fc');
-        iceFloorGrad.addColorStop(1, '#0369a1');
-        ctx.fillStyle = iceFloorGrad;
-        ctx.fillRect(0, GROUND_Y + 24, WORLD_W, WORLD_H - (GROUND_Y + 24));
-    }
-
-    function drawIcicles(ctx) {
-        for (const ic of state.icicles) {
-            ctx.save();
-            ctx.translate(ic.x, ic.y);
-            const grad = ctx.createLinearGradient(0, -ic.length, 0, 0);
-            grad.addColorStop(0, '#e0f2fe');
-            grad.addColorStop(0.65, '#38bdf8');
-            grad.addColorStop(1, '#0284c7');
-            ctx.fillStyle = grad;
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 2.2;
-            ctx.beginPath();
-            ctx.moveTo(-ic.halfWidth, -ic.length);
-            ctx.lineTo(ic.halfWidth, -ic.length);
-            ctx.lineTo(0, 0);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            ctx.restore();
+        if (destroyedIndices.size > 0) {
+            state.snowballs = state.snowballs.filter((_, idx) => !destroyedIndices.has(idx));
         }
     }
 
@@ -2765,9 +2841,9 @@
             ctx.save();
             ctx.translate(sb.x, sb.y);
             ctx.rotate(sb.rot);
-            ctx.fillStyle = sb.isFreeze ? '#bae6fd' : (sb.isMega ? '#fef08a' : '#ffffff');
-            ctx.strokeStyle = sb.isFreeze ? '#0284c7' : (sb.isMega ? '#f59e0b' : (sb.team === 'blue' ? '#2563eb' : '#dc2626'));
-            ctx.lineWidth = 3;
+            ctx.fillStyle = sb.isFreeze ? '#bae6fd' : '#ffffff';
+            ctx.strokeStyle = sb.isFreeze ? '#0284c7' : (sb.isMega ? '#38bdf8' : (sb.team === 'blue' ? '#2563eb' : '#dc2626'));
+            ctx.lineWidth = sb.isMega ? 3.5 : 3;
             ctx.beginPath();
             ctx.arc(0, 0, sb.radius, 0, Math.PI * 2);
             ctx.fill();
@@ -3222,17 +3298,25 @@
         document.getElementById('lobby-status-msg').textContent = `Eşleşme bulundu! Oda: ${lobbyState.roomCode}`;
     });
 
-    document.getElementById('player-nick').addEventListener('input', () => {
-        const nickInput = document.getElementById('player-nick');
-        if (nickInput && getRawNickname()) {
-            nickInput.classList.remove('border-rose-500');
-            nickInput.classList.add('border-sky-300');
-            const nickErr = document.getElementById('nick-error-msg');
-            if (nickErr) nickErr.classList.add('hidden');
-        }
-        if (config.playersMode === 'online' && lobbyState.roomCreated) buildLobbySlots();
-        if (config.nicknameConfirmed) refreshMenuFlow();
-    });
+    const nickField = document.getElementById('player-nick');
+    if (nickField) {
+        nickField.addEventListener('input', () => {
+            if (getRawNickname()) {
+                nickField.classList.remove('border-rose-500');
+                nickField.classList.add('border-sky-300');
+                const nickErr = document.getElementById('nick-error-msg');
+                if (nickErr) nickErr.classList.add('hidden');
+            }
+            if (config.playersMode === 'online' && lobbyState.roomCreated) buildLobbySlots();
+            if (config.nicknameConfirmed) refreshMenuFlow();
+        });
+        nickField.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleContinueFromNickname(e);
+            }
+        });
+    }
 
     function handleContinueFromNickname(e) {
         if (e && e.cancelable) e.preventDefault();
@@ -3273,41 +3357,45 @@
         });
     }
 
-    const nickField = document.getElementById('player-nick');
-    if (nickField) {
-        nickField.addEventListener('keydown', e => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                handleContinueFromNickname(e);
-            }
-        });
-    }
-
     const rulesBtn = document.getElementById('btn-rules-info');
     const rulesPopover = document.getElementById('rules-hold-popover');
-    function showRulesHold(e) {
-        if (e && e.cancelable) e.preventDefault();
-        rulesPopover.classList.remove('hidden');
+    const closeRulesBtn = document.getElementById('btn-close-rules');
+
+    function toggleRulesPopover(e) {
+        if (e) e.stopPropagation();
+        if (!rulesPopover) return;
+        rulesPopover.classList.toggle('hidden');
     }
-    function hideRulesHold() {
+
+    function hideRulesPopover() {
+        if (!rulesPopover) return;
         rulesPopover.classList.add('hidden');
     }
+
     if (rulesBtn && rulesPopover) {
-        rulesBtn.addEventListener('pointerdown', showRulesHold);
-        rulesBtn.addEventListener('touchstart', showRulesHold, { passive: false });
-        rulesBtn.addEventListener('mousedown', showRulesHold);
-        window.addEventListener('pointerup', hideRulesHold);
-        window.addEventListener('pointercancel', hideRulesHold);
-        window.addEventListener('touchend', hideRulesHold);
-        window.addEventListener('touchcancel', hideRulesHold);
-        window.addEventListener('mouseup', hideRulesHold);
-        window.addEventListener('blur', hideRulesHold);
+        rulesBtn.addEventListener('click', toggleRulesPopover);
     }
+    if (closeRulesBtn) {
+        closeRulesBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            hideRulesPopover();
+        });
+    }
+    document.addEventListener('click', (e) => {
+        if (!rulesPopover || rulesPopover.classList.contains('hidden')) return;
+        const clickedInsidePopover = rulesPopover.contains(e.target);
+        const clickedInfoBtn = rulesBtn && rulesBtn.contains(e.target);
+        if (!clickedInsidePopover && !clickedInfoBtn) {
+            hideRulesPopover();
+        }
+    });
 
     document.querySelectorAll('.emoji-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            const human = state.players.find(p => p.isHuman && p.isAlive);
-            if (human) spawnFloatingText(human.x, human.y - 125, btn.dataset.emoji, '#ffffff');
+            const p1 = state.players.find(p => p.isHuman);
+            if (p1) {
+                spawnFloatingText(p1.x, p1.y - 140, btn.dataset.emoji, '#ffffff');
+            }
         });
     });
 
