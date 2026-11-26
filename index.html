@@ -2711,6 +2711,17 @@
                 const i = state.mysteryBoxes.findIndex(b => b.id === e.id);
                 const pw = MYSTERY_POWERS.find(m => m.type === e.ty);
                 const box = i >= 0 ? state.mysteryBoxes.splice(i, 1)[0] : (pw ? { ...pw, x: MOUND_X, y: 260 } : null);
+
+                // Remove the same projectile on every peer when a box is hit.
+                // Remote projectiles do not resolve box collisions locally.
+                if (e.sid) {
+                    const snowballIndex = state.snowballs.findIndex(b => b.sid === e.sid);
+                    if (snowballIndex >= 0) {
+                        const snowball = state.snowballs.splice(snowballIndex, 1)[0];
+                        spawnSnowPuff(box ? box.x : snowball.x, box ? box.y : snowball.y, 14, '#7dd3fc');
+                    }
+                }
+
                 const who = playerByPid(e.pid);
                 if (box && who) grantMysteryPower(who, box);
                 break;
@@ -3296,7 +3307,7 @@
                 const box = state.mysteryBoxes[b];
                 if (!(sb.owner && sb.owner.isRemote) && dist(sb.x, sb.y, box.x, box.y) < sb.radius + box.size * 0.6) {
                     grantMysteryPower(sb.owner, box);
-                    if (net.active) netSend({ t: 'pick', id: box.id, pid: sb.owner.pid, ty: box.type });
+                    if (net.active) netSend({ t: 'pick', id: box.id, pid: sb.owner.pid, ty: box.type, sid: sb.sid });
                     state.mysteryBoxes.splice(b, 1);
                     hitBox = true;
                     break;
