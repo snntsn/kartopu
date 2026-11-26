@@ -246,7 +246,7 @@
     </div>
 
     <!-- Tur / Sonuç Duyuru Bannerı -->
-    <div id="banner-overlay" class="hidden fixed inset-0 z-35 pointer-events-none flex items-center justify-center px-4">
+    <div id="banner-overlay" class="hidden fixed inset-0 z-[35] pointer-events-none flex items-center justify-center px-4">
         <div id="banner-card" class="bg-slate-900/95 border-4 border-amber-400 rounded-3xl px-7 py-5 text-center shadow-[0_0_45px_rgba(251,191,36,0.45)] max-w-lg w-full">
             <h2 id="banner-title" class="text-2xl sm:text-4xl font-black text-amber-300 drop-shadow mb-1">1. TUR BAŞLIYOR!</h2>
             <p id="banner-subtitle" class="text-white text-xs sm:text-base font-bold">AT tuşuna basılı tut, eksen x'ten y'ye ilerlesin, bırakınca fırlat!</p>
@@ -496,130 +496,144 @@
             if (this.muted) return;
             this.init();
             if (!this.ctx) return;
-            const now = this.ctx.currentTime;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = 'sine';
-            const base = isDouble ? 360 : 230;
-            osc.frequency.setValueAtTime(base, now);
-            osc.frequency.exponentialRampToValueAtTime(base * 2.15, now + 0.14);
-            gain.gain.setValueAtTime(0.15, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start(now);
-            osc.stop(now + 0.16);
+            try {
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                const base = isDouble ? 360 : 230;
+                osc.frequency.setValueAtTime(base, now);
+                osc.frequency.exponentialRampToValueAtTime(base * 2.15, now + 0.14);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.16);
+            } catch (_) {}
         }
         playDuck() {
             if (this.muted) return;
             this.init();
             if (!this.ctx) return;
-            const now = this.ctx.currentTime;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(240, now);
-            osc.frequency.exponentialRampToValueAtTime(110, now + 0.09);
-            gain.gain.setValueAtTime(0.1, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start(now);
-            osc.stop(now + 0.11);
+            try {
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(240, now);
+                osc.frequency.exponentialRampToValueAtTime(110, now + 0.09);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.11);
+            } catch (_) {}
         }
         playThrow(power = 0.5) {
             if (this.muted) return;
             this.init();
             if (!this.ctx) return;
-            const now = this.ctx.currentTime;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(380 + power * 260, now);
-            osc.frequency.exponentialRampToValueAtTime(110, now + 0.15);
-            gain.gain.setValueAtTime(0.17 + power * 0.1, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start(now);
-            osc.stop(now + 0.17);
+            try {
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(380 + power * 260, now);
+                osc.frequency.exponentialRampToValueAtTime(110, now + 0.15);
+                gain.gain.setValueAtTime(0.17 + power * 0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.17);
+            } catch (_) {}
         }
         playHit(heavy = false) {
             if (this.muted) return;
             this.init();
             if (!this.ctx) return;
-            const now = this.ctx.currentTime;
-            const dur = heavy ? 0.24 : 0.13;
-            const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * dur, this.ctx.sampleRate);
-            const data = buf.getChannelData(0);
-            for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-            const src = this.ctx.createBufferSource();
-            src.buffer = buf;
-            const filter = this.ctx.createBiquadFilter();
-            filter.type = 'lowpass';
-            filter.frequency.setValueAtTime(heavy ? 640 : 1250, now);
-            filter.frequency.exponentialRampToValueAtTime(135, now + dur);
-            const gain = this.ctx.createGain();
-            gain.gain.setValueAtTime(heavy ? 0.32 : 0.2, now);
-            gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
-            src.connect(filter);
-            filter.connect(gain);
-            gain.connect(this.ctx.destination);
-            src.start(now);
+            try {
+                const now = this.ctx.currentTime;
+                const dur = heavy ? 0.24 : 0.13;
+                const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * dur, this.ctx.sampleRate);
+                const data = buf.getChannelData(0);
+                for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+                const src = this.ctx.createBufferSource();
+                src.buffer = buf;
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(heavy ? 640 : 1250, now);
+                filter.frequency.exponentialRampToValueAtTime(135, now + dur);
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(heavy ? 0.32 : 0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+                src.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                src.start(now);
+            } catch (_) {}
         }
         playFreeze() {
             if (this.muted) return;
             this.init();
             if (!this.ctx) return;
-            [987.77, 1318.51, 1567.98].forEach((f, i) => {
-                const now = this.ctx.currentTime + i * 0.04;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(f, now);
-                gain.gain.setValueAtTime(0.14, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start(now);
-                osc.stop(now + 0.19);
-            });
+            try {
+                [987.77, 1318.51, 1567.98].forEach((f, i) => {
+                    const now = this.ctx.currentTime + i * 0.04;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(f, now);
+                    gain.gain.setValueAtTime(0.14, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.19);
+                });
+            } catch (_) {}
         }
         playPowerup() {
             if (this.muted) return;
             this.init();
             if (!this.ctx) return;
-            [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
-                const now = this.ctx.currentTime + i * 0.05;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(f, now);
-                gain.gain.setValueAtTime(0.15, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start(now);
-                osc.stop(now + 0.15);
-            });
+            try {
+                [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+                    const now = this.ctx.currentTime + i * 0.05;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(f, now);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                });
+            } catch (_) {}
         }
         playCheer() {
             if (this.muted) return;
             this.init();
             if (!this.ctx) return;
-            [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
-                const now = this.ctx.currentTime + i * 0.12;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(f, now);
-                gain.gain.setValueAtTime(0.2, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start(now);
-                osc.stop(now + 0.34);
-            });
+            try {
+                [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+                    const now = this.ctx.currentTime + i * 0.12;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(f, now);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.34);
+                });
+            } catch (_) {}
         }
     }
     const sfx = new SoundEffects();
@@ -1256,7 +1270,7 @@
                 spawnSnowPuff(this.x, this.y - 42, 35, this.team === 'blue' ? '#60a5fa' : '#f87171');
                 spawnFloatingText(this.x, this.y - 102, 'NAKAVT!', '#fbbf24');
                 triggerShake(0.28, 10);
-                checkRoundEnd();
+                if (typeof checkRoundEnd === 'function') checkRoundEnd();
             }
         }
 
@@ -2357,7 +2371,7 @@
 
         updateHUD();
         state.screen = 'roundIntro';
-        showBanner(`${state.round}. TUR BAŞLIYOR!`, 'AT tuşuna basılı tut, eksen x\'ten y\'ye ilerlesin, bırakınca fırlat!', 'intro');
+        showBanner(`${state.round}. ROUND BAŞLIYOR!`, 'AT tuşuna basılı tut, eksen x\'ten y\'ye ilerlesin, bırakınca fırlat!', 'intro');
 
         setTimeout(() => {
             if (state.screen === 'roundIntro') {
@@ -2391,18 +2405,24 @@
             updateHUD();
             sfx.playCheer();
 
-            const title = winnerTeam === 'blue' ? 'MAVİ TAKIM TURU ALDI!' : 'KIRMIZI TAKIM TURU ALDI!';
-            showBanner(title, `Skor: Mavi ${state.blueScore} - ${state.redScore} Kırmızı`, winnerTeam);
+            const finishedMatch = state.blueScore >= config.roundsToWin || state.redScore >= config.roundsToWin;
+            const nextRoundNum = state.round + 1;
+            const title = winnerTeam === 'blue' ? 'MAVİ TAKIM ROUND\'U ALDI!' : 'KIRMIZI TAKIM ROUND\'U ALDI!';
+            const subtitle = finishedMatch
+                ? `Skor: Mavi ${state.blueScore} - ${state.redScore} Kırmızı • Şampiyonluk belli oldu!`
+                : `Skor: Mavi ${state.blueScore} - ${state.redScore} Kırmızı • Yeni round (${nextRoundNum}. round) başlıyor...`;
+
+            showBanner(title, subtitle, winnerTeam);
 
             setTimeout(() => {
                 hideBanner();
-                if (state.blueScore >= config.roundsToWin || state.redScore >= config.roundsToWin) {
+                if (finishedMatch) {
                     showGameOver(winnerTeam);
                 } else {
-                    state.round++;
+                    state.round = nextRoundNum;
                     setupRound();
                 }
-            }, 2100);
+            }, 2200);
         }
     }
 
@@ -3263,7 +3283,6 @@
         });
     }
 
-    // Kurallar bilgi işareti: yalnızca basılı tutulduğunda görünür, bırakılınca kaybolur
     const rulesBtn = document.getElementById('btn-rules-info');
     const rulesPopover = document.getElementById('rules-hold-popover');
     function showRulesHold(e) {
