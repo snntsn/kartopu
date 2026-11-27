@@ -676,6 +676,13 @@
     const rand = (min, max) => Math.random() * (max - min) + min;
     const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
     const dist = (x1, y1, x2, y2) => Math.hypot(x2 - x1, y2 - y1);
+    // Bir noktanın, (x1,y1)-(x2,y2) doğru parçasına en kısa uzaklığı (hızlı topların kutuyu atlamaması için)
+    function segDist(px, py, x1, y1, x2, y2) {
+        const dx = x2 - x1, dy = y2 - y1;
+        const l2 = dx * dx + dy * dy;
+        const t = l2 > 0 ? clamp(((px - x1) * dx + (py - y1) * dy) / l2, 0, 1) : 0;
+        return dist(px, py, x1 + dx * t, y1 + dy * t);
+    }
 
     function getRawNickname() {
         const input = document.getElementById('player-nick');
@@ -2710,7 +2717,7 @@
                 if (mine) return;
                 const i = state.mysteryBoxes.findIndex(b => b.id === e.id);
                 const pw = MYSTERY_POWERS.find(m => m.type === e.ty);
-                const box = i >= 0 ? state.mysteryBoxes.splice(i, 1)[0] : (pw ? { ...pw, x: MOUND_X, y: 260 } : null);
+                const box = i >= 0 ? state.mysteryBoxes.splice(i, 1)[0] : (pw ? { ...pw, x: e.x ?? MOUND_X, y: e.y ?? 260 } : null);
 
                 // Remove the same projectile on every peer when a box is hit.
                 // Remote projectiles do not resolve box collisions locally.
@@ -2724,6 +2731,32 @@
 
                 const who = playerByPid(e.pid);
                 if (box && who) grantMysteryPower(who, box);
+                break;
+            }
+            case 'bhit': {
+                if (mine) return;
+                const bi = state.snowballs.findIndex(b => b.sid === e.sid);
+                if (bi < 0) return;                                  // top zaten yok
+                const ball = state.snowballs[bi];
+                if (!ball.owner || ball.owner.isRemote) return;      // sadece topun sahibi karar verir
+                state.snowballs.splice(bi, 1);
+                const xi = state.mysteryBoxes.findIndex(b => b.id === e.id);
+                if (xi >= 0) {
+                    const box = state.mysteryBoxes.splice(xi, 1)[0];
+                    grantMysteryPower(ball.owner, box);
+                    netSend({ t: 'pick', id: box.id, pid: ball.owner.pid, ty: box.type, sid: ball.sid, x: box.x, y: box.y });
+                } else {
+                    spawnSnowPuff(ball.x, ball.y, 14, '#7dd3fc');
+                }
+                break;
+            }
+            case 'cx': {
+                if (mine) return;
+                const i = state.snowballs.findIndex(b => b.sid === e.sid);
+                if (i >= 0) {
+                    const b = state.snowballs.splice(i, 1)[0];
+                    spawnSnowPuff(b.x, b.y, 14, '#ffffff');
+                }
                 break;
             }
             case 'ic': {
@@ -3196,7 +3229,7 @@
                 const hb = p.getHitbox();
                 if (dist(hb.x, hb.y, box.x, box.y) < hb.r + box.size * 0.55) {
                     grantMysteryPower(p, box);
-                    if (net.active) netSend({ t: 'pick', id: box.id, pid: p.pid, ty: box.type });
+                    if (net.active) netSend({ t: 'pick', id: box.id, pid: p.pid, ty: box.type, x: box.x, y: box.y });
                     state.mysteryBoxes.splice(i, 1);
                     break;
                 }
@@ -3260,6 +3293,9 @@
                 if (dist(pa.x, pa.y, pb.x, pb.y) < pa.sb.radius + pb.sb.radius) {
                     cancelledSnowballSids.add(pa.sb.sid);
                     cancelledSnowballSids.add(pb.sb.sid);
+                    if (net.active) {
+                        [pa.sb, pb.sb].forEach(s => { if (s.owner && !s.owner.isRemote) netSend({ t: 'cx', sid: s.sid }); });
+                    }
                     const midX = (pa.x + pb.x) * 0.5;
                     const midY = (pa.y + pb.y) * 0.5;
                     spawnSnowPuff(midX, midY, 20, '#ffffff');
@@ -3302,13 +3338,25 @@
                 continue;
             }
 
+            // Kutu çarpışması HER istemcide çözülür (uzaktaki toplar dahil). Böylece kutuya çarpıp
+            // yok olan top, 'pick' mesajı gecikse bile rakibin ekranında devam edip hayalet hasar vermez.
+            // Gücü ve kutuyu yalnızca topun sahibinin istemcisi dağıtır/siler; diğerleri sadece topu siler.
             let hitBox = false;
+            const isRemoteBall = !!(sb.owner && sb.owner.isRemote);
             for (let b = state.mysteryBoxes.length - 1; b >= 0; b--) {
                 const box = state.mysteryBoxes[b];
-                if (!(sb.owner && sb.owner.isRemote) && dist(sb.x, sb.y, box.x, box.y) < sb.radius + box.size * 0.6) {
-                    grantMysteryPower(sb.owner, box);
-                    if (net.active) netSend({ t: 'pick', id: box.id, pid: sb.owner.pid, ty: box.type, sid: sb.sid });
-                    state.mysteryBoxes.splice(b, 1);
+                const reach = sb.radius + box.size * 0.6 + (isRemoteBall ? 10 : 0);
+                if (segDist(box.x, box.y, sbPrevX, sbPrevY, sb.x, sb.y) < reach) {
+                    if (!isRemoteBall) {
+                        grantMysteryPower(sb.owner, box);
+                        if (net.active) netSend({ t: 'pick', id: box.id, pid: sb.owner.pid, ty: box.type, sid: sb.sid, x: box.x, y: box.y });
+                        state.mysteryBoxes.splice(b, 1);
+                    } else {
+                        spawnSnowPuff(box.x, box.y, 14, '#7dd3fc');
+                        sfx.playHit(false);
+                        // Atan kişinin ekranında da top aynı anda yok olsun (kutuyu o dağıtır)
+                        if (net.active) netSend({ t: 'bhit', sid: sb.sid, id: box.id });
+                    }
                     hitBox = true;
                     break;
                 }
@@ -3351,6 +3399,31 @@
             }
         }
 
+        const destroyedIndices = new Set();
+        for (let a = 0; a < state.snowballs.length; a++) {
+            if (destroyedIndices.has(a)) continue;
+            const sbA = state.snowballs[a];
+            for (let b = a + 1; b < state.snowballs.length; b++) {
+                if (destroyedIndices.has(b)) continue;
+                const sbB = state.snowballs[b];
+                if (sbA.team === sbB.team) continue;
+
+                if (dist(sbA.x, sbA.y, sbB.x, sbB.y) < sbA.radius + sbB.radius) {
+                    destroyedIndices.add(a);
+                    destroyedIndices.add(b);
+                    const midX = (sbA.x + sbB.x) * 0.5;
+                    const midY = (sbA.y + sbB.y) * 0.5;
+                    spawnSnowPuff(midX, midY, 20, '#ffffff');
+                    spawnFloatingText(midX, midY - 12, '❄️ ÇARPIŞMA!', '#e0f2fe');
+                    sfx.playHit(sbA.isMega || sbB.isMega);
+                    break;
+                }
+            }
+        }
+
+        if (destroyedIndices.size > 0) {
+            state.snowballs = state.snowballs.filter((_, idx) => !destroyedIndices.has(idx));
+        }
     }
 
     function drawMysteryBoxes(ctx) {
